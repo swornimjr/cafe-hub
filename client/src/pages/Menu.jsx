@@ -146,7 +146,7 @@ export default function Menu() {
         <div className="flex-gap">
           <input
             className="form-input"
-            style={{ width: 180, padding: '6px 10px', fontSize: 13 }}
+            style={{ width: 180, maxWidth: '100%', padding: '6px 10px', fontSize: 13 }}
             placeholder="Search…"
             value={search}
             onChange={e => setSearch(e.target.value)}

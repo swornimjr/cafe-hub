@@ -127,7 +127,7 @@ export default function Recipes() {
       <div className="flex-between" style={{ marginBottom: 16 }}>
         <input
           className="form-input"
-          style={{ width: 200, padding: '6px 10px', fontSize: 13 }}
+          style={{ width: 200, maxWidth: '100%', padding: '6px 10px', fontSize: 13 }}
           placeholder="Search recipes…"
           value={search}
           onChange={e => setSearch(e.target.value)}

@@ -200,7 +200,7 @@ export default function StoreRoster({ role, store }) {
       <div className="page-title">{store} Roster</div>
 
       {/* Week navigator */}
-      <div className="flex-between" style={{ marginBottom: 16 }}>
+      <div className="roster-nav">
         <div className="flex-gap">
           <button className="btn btn-outline btn-sm" onClick={() => setWeekOf(w => addWeeks(w, -1))}>← Prev</button>
           <span style={{ fontSize: 14, fontWeight: 500 }}>
