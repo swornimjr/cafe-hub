@@ -336,7 +336,7 @@ export default function StoreRoster({ role, store }) {
       {isBoss && showForm && (
         <div className="add-form" ref={formRef}>
           <div className="section-label">{editingId ? 'Edit shift' : 'Add shift'} — {store}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+          <div className="form-grid-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label">Day</label>
               <select className="form-select" value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))}>

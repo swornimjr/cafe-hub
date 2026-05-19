@@ -158,7 +158,7 @@ export default function Dashboard({ role, onStockCount }) {
           Today's roster — {todayLabel}
           <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{formatWeekRange(currentWeekOf)}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="roster-today-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {[{ store: 'Atrium', shifts: atriumToday }, { store: 'Cleanskin', shifts: cleanskinToday }].map(({ store, shifts }) => {
             const col = STORE_COLORS[store];
             return (

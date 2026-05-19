@@ -546,6 +546,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .page { padding: 16px 14px; }
   .topbar { padding: 0 16px; height: 52px; }
   .topbar-brand small { display: none; }
+  .topbar-name { display: none; }
   .nav-tabs { padding: 0 10px; top: 52px; }
   .nav-tab { padding: 0 12px; height: 44px; font-size: 12px; }
   .card { padding: 14px 16px; border-radius: var(--r-sm); }
@@ -555,6 +556,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .stock-item { flex-wrap: wrap; }
   .stock-actions { width: 100%; justify-content: flex-end; }
   .form-row { grid-template-columns: 1fr; }
+  .form-grid-4 { grid-template-columns: 1fr 1fr !important; }
+  .roster-today-grid { grid-template-columns: 1fr !important; }
   .login-card { padding: 28px 20px; }
   .order-row { flex-direction: column; align-items: stretch; }
   .order-row .grow-3,

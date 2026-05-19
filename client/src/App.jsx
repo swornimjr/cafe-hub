@@ -63,7 +63,7 @@ function ChangePasswordModal({ onClose }) {
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: 340, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+      <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: 'min(340px, calc(100vw - 32px))', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
         <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 18 }}>Change password</div>
         <div className="form-group">
           <label className="form-label">Current password</label>
@@ -132,7 +132,7 @@ function AppInner() {
           </div>
         </div>
         <div className="user-badge">
-          <strong>{user.name}</strong>
+          <strong className="topbar-name">{user.name}</strong>
           <button className="logout-btn" onClick={() => setShowChangePw(true)} title="Change password">🔑</button>
           <button className="logout-btn" onClick={logout}>Sign out</button>
         </div>
