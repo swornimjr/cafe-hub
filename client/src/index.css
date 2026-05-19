@@ -42,10 +42,11 @@ body {
 .topbar {
   background: var(--espresso);
   padding: 0 28px;
+  padding-top: env(safe-area-inset-top);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-top));
   position: sticky;
   top: 0;
   z-index: 100;
@@ -104,7 +105,7 @@ body {
   scrollbar-width: none;
   box-shadow: var(--shadow-sm);
   position: sticky;
-  top: 60px;
+  top: calc(60px + env(safe-area-inset-top));
   z-index: 99;
 }
 .nav-tabs::-webkit-scrollbar { display: none; }
@@ -544,10 +545,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .page { padding: 16px 14px; }
-  .topbar { padding: 0 16px; height: 52px; }
+  .topbar { padding: 0 16px; padding-top: env(safe-area-inset-top); height: calc(52px + env(safe-area-inset-top)); }
   .topbar-brand small { display: none; }
   .topbar-name { display: none; }
-  .nav-tabs { padding: 0 10px; top: 52px; }
+  .nav-tabs { padding: 0 10px; top: calc(52px + env(safe-area-inset-top)); }
   .nav-tab { padding: 0 12px; height: 44px; font-size: 12px; }
   .card { padding: 14px 16px; border-radius: var(--r-sm); }
   .add-form { padding: 14px; }
