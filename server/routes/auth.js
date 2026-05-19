@@ -12,7 +12,7 @@ async function sendCredentials(to, name, username, password) {
     await sendEmail({
       to,
       subject: 'Your Cafe Hub login details',
-      text: `Hi ${name},\n\nYour Cafe Hub account is ready.\n\nUsername: ${username}\nPassword: ${password}\n\nLog in at your store's Cafe Hub link and change your password once you're in.\n\nCafe Hub`,
+      text: `Hi ${name},\n\nYour Cafe Hub account is ready.\n\nUsername: ${username}\nPassword: ${password}\n\nLog in at your store's Cafe Hub link and change your password once you're in.\n\nhttps://cafehubs.vercel.app/`,
     });
     return true;
   } catch (e) {
