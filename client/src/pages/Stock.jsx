@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { authFetch } from '../api.js';
 
@@ -19,6 +19,8 @@ export default function Stock({ role, onStockCount }) {
   const [sentResult, setSentResult] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productDropdownRef = useRef(null);
 
   const isBoss = role === 'boss';
   const isTeamLeader = role === 'teamleader';
@@ -29,6 +31,20 @@ export default function Stock({ role, onStockCount }) {
     load();
     if (canOrder) authFetch('/api/products').then(r => r.json()).then(setProducts);
     if (myStore) setLine(l => ({ ...l, store: myStore }));
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (productDropdownRef.current && !productDropdownRef.current.contains(e.target)) {
+        setShowProductDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   async function load() {
@@ -226,27 +242,41 @@ export default function Stock({ role, onStockCount }) {
                         key={s}
                         className={`btn btn-sm ${line.store === s ? 'btn-primary' : 'btn-outline'}`}
                         style={{ height: 42 }}
-                        onClick={() => setLine(l => ({ ...l, store: s, productInput: '', item: '', unit: '' }))}
+                        onClick={() => { setLine(l => ({ ...l, store: s, productInput: '', item: '', unit: '' })); setShowProductDropdown(false); }}
                       >{s}</button>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="grow-3">
+              <div className="grow-3" style={{ position: 'relative' }} ref={productDropdownRef}>
                 <label className="form-label">Product</label>
                 <input
                   className="form-input"
-                  list="product-list"
                   value={line.productInput}
-                  onChange={e => pickProduct(e.target.value)}
+                  onChange={e => { pickProduct(e.target.value); setShowProductDropdown(true); }}
+                  onFocus={() => setShowProductDropdown(true)}
                   placeholder="Type or pick a product…"
                   disabled={!myStore && !line.store}
+                  autoComplete="off"
                 />
-                <datalist id="product-list">
-                  {availableProducts.map(p => (
-                    <option key={p._id} value={p.name}>{p.category} · {p.unit}</option>
-                  ))}
-                </datalist>
+                {showProductDropdown && availableProducts.length > 0 && (
+                  <ul className="product-dropdown">
+                    {availableProducts
+                      .filter(p => !line.productInput || p.name.toLowerCase().includes(line.productInput.toLowerCase()))
+                      .map(p => (
+                        <li
+                          key={p._id}
+                          className="product-dropdown-item"
+                          onMouseDown={e => { e.preventDefault(); pickProduct(p.name); setShowProductDropdown(false); }}
+                          onTouchEnd={e => { e.preventDefault(); pickProduct(p.name); setShowProductDropdown(false); }}
+                        >
+                          <span>{p.name}</span>
+                          <span className="product-dropdown-meta">{p.category} · {p.unit}</span>
+                        </li>
+                      ))
+                    }
+                  </ul>
+                )}
               </div>
               <div className="grow-1">
                 <label className="form-label">Qty{line.unit ? ` (${line.unit})` : ''}</label>
