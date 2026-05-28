@@ -21,6 +21,7 @@ export default function Stock({ role, onStockCount }) {
   const [editQty, setEditQty] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const productDropdownRef = useRef(null);
+  const touchStartY = useRef(null);
 
   const isBoss = role === 'boss';
   const isTeamLeader = role === 'teamleader';
@@ -268,7 +269,11 @@ export default function Stock({ role, onStockCount }) {
                           key={p._id}
                           className="product-dropdown-item"
                           onMouseDown={e => { e.preventDefault(); pickProduct(p.name); setShowProductDropdown(false); }}
-                          onTouchEnd={e => { e.preventDefault(); pickProduct(p.name); setShowProductDropdown(false); }}
+                          onTouchStart={e => { touchStartY.current = e.touches[0].clientY; }}
+                          onTouchEnd={e => {
+                            const delta = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+                            if (delta < 8) { e.preventDefault(); pickProduct(p.name); setShowProductDropdown(false); }
+                          }}
                         >
                           <span>{p.name}</span>
                           <span className="product-dropdown-meta">{p.category} · {p.unit}</span>
