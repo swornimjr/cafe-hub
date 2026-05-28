@@ -542,6 +542,38 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .order-row .grow-1 { flex: 1; min-width: 90px; }
 .order-row .shrink { flex-shrink: 0; }
 
+/* ── Product dropdown (replaces datalist for iOS compat) ── */
+.product-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.product-dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 8px;
+}
+.product-dropdown-item:last-child { border-bottom: none; }
+.product-dropdown-item:hover, .product-dropdown-item:active { background: #f0fdf4; }
+.product-dropdown-meta { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+
 /* ── Roster nav ─────────────────────────────────────────── */
 .roster-nav {
   display: flex;
