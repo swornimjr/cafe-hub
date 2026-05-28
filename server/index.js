@@ -32,12 +32,31 @@ app.use('/api/settings', requireAuth, settingsRouter);
 app.use('/api/menu', requireAuth, menuRouter);
 app.use('/api/recipes', requireAuth, recipesRouter);
 
+app.get('/api/health', async (req, res) => {
+  try {
+    await mongoose.connection.db.command({ ping: 1 });
+    res.json({ status: 'ok' });
+  } catch {
+    res.status(503).json({ status: 'error' });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 
 mongoose
   .connect(process.env.MONGODB_URI, { tls: true, tlsInsecure: false, serverSelectionTimeoutMS: 10000 })
   .then(() => {
     console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      // Keep MongoDB connection warm — Atlas idles after ~5 min of inactivity
+      setInterval(async () => {
+        try {
+          await mongoose.connection.db.command({ ping: 1 });
+        } catch (err) {
+          console.error('Keep-alive ping failed:', err.message);
+        }
+      }, 14 * 60 * 1000);
+    });
   })
   .catch((err) => console.error('MongoDB connection error:', err));
