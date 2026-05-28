@@ -11,6 +11,8 @@ export default function Roster({ role }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ day: 'Mon', name: '', store: 'Atrium', time: '' });
 
+  const [search, setSearch] = useState('');
+
   const isBoss = role === 'boss';
   const filterStore = role === 'atrium' ? 'Atrium' : role === 'cleanskin' ? 'Cleanskin' : null;
 
@@ -35,9 +37,20 @@ export default function Roster({ role }) {
     <>
       <div className="page-title">Weekly Roster</div>
       <div className="page-sub">{isBoss ? 'Both stores' : `${filterStore} only`}</div>
+      <input
+        className="form-input"
+        style={{ marginBottom: 12 }}
+        placeholder="Search by name…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
       <div className="card">
         {DAYS.map(d => {
-          const dayShifts = shifts.filter(s => s.day === d && (!filterStore || s.store === filterStore));
+          const dayShifts = shifts.filter(s =>
+            s.day === d &&
+            (!filterStore || s.store === filterStore) &&
+            (!search.trim() || s.name.toLowerCase().includes(search.toLowerCase()))
+          );
           const isToday = d === todayLabel;
           return (
             <div className="day-row" key={d}>
