@@ -34,10 +34,10 @@ export default function Settings() {
       <div className="page-sub">Configure contacts for stock orders and roster emails</div>
 
       <div className="card" style={{ maxWidth: 480 }}>
-        <div className="section-label" style={{ marginBottom: 16 }}>Supplier contact</div>
+        <div className="section-label" style={{ marginBottom: 16 }}>Storeroom contact</div>
 
         <div className="form-group">
-          <label className="form-label">Supplier email</label>
+          <label className="form-label">Storeroom email</label>
           <input
             className="form-input"
             type="email"
@@ -49,7 +49,7 @@ export default function Settings() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Supplier WhatsApp number</label>
+          <label className="form-label">Storeroom WhatsApp number</label>
           <input
             className="form-input"
             type="tel"
