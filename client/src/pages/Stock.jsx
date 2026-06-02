@@ -340,19 +340,50 @@ export default function Stock({ role, onStockCount }) {
       )}
 
       {/* View toggle + store filter */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className={`btn btn-sm ${view === 'active' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('active')}>
-            Active {activeItems.length > 0 && <span style={{ marginLeft: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 99, padding: '0 6px', fontSize: 10 }}>{activeItems.length}</span>}
-          </button>
-          <button className={`btn btn-sm ${view === 'history' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setView('history')}>
-            History {sentItems.length > 0 && <span style={{ marginLeft: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 99, padding: '0 6px', fontSize: 10 }}>{sentItems.length}</span>}
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        {/* Active / History toggle */}
+        <div style={{ display: 'flex', background: 'var(--foam)', borderRadius: 8, padding: 3, gap: 2 }}>
+          {[
+            { key: 'active',  label: 'Active',  count: activeItems.length },
+            { key: 'history', label: 'History', count: sentItems.length },
+          ].map(({ key, label, count }) => (
+            <button key={key} onClick={() => setView(key)} style={{
+              padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif', fontWeight: 600, fontSize: 12,
+              transition: 'all 0.15s',
+              background: view === key ? '#fff' : 'transparent',
+              color: view === key ? 'var(--text)' : 'var(--text-muted)',
+              boxShadow: view === key ? 'var(--shadow-sm)' : 'none',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              {label}
+              {count > 0 && (
+                <span style={{
+                  background: view === key ? 'var(--espresso)' : 'var(--border)',
+                  color: view === key ? '#fff' : 'var(--text-muted)',
+                  borderRadius: 99, padding: '1px 7px', fontSize: 10, fontWeight: 700,
+                }}>{count}</span>
+              )}
+            </button>
+          ))}
         </div>
+
+        {/* Store filter */}
         {showStoreTabs && (
           <div style={{ display: 'flex', gap: 6 }}>
-            {['All', 'Atrium', 'Cleanskin'].map(t => (
-              <button key={t} className={`btn btn-sm ${storeTab === t ? 'btn-primary' : 'btn-outline'}`} onClick={() => setStoreTab(t)}>{t}</button>
+            {[
+              { key: 'All',      label: 'All',       activeBg: 'var(--espresso)', activeColor: '#fff' },
+              { key: 'Atrium',   label: '☕ Atrium',  activeBg: '#16a34a',         activeColor: '#fff' },
+              { key: 'Cleanskin',label: '🍽️ Cleanskin',activeBg: '#1e293b',        activeColor: '#f1f5f9' },
+            ].map(({ key, label, activeBg, activeColor }) => (
+              <button key={key} onClick={() => setStoreTab(key)} style={{
+                padding: '5px 12px', borderRadius: 6, border: '1px solid',
+                fontFamily: 'DM Sans, sans-serif', fontWeight: 600, fontSize: 12,
+                cursor: 'pointer', transition: 'all 0.15s',
+                background: storeTab === key ? activeBg : '#fff',
+                color: storeTab === key ? activeColor : 'var(--text-muted)',
+                borderColor: storeTab === key ? activeBg : 'var(--border)',
+              }}>{label}</button>
             ))}
           </div>
         )}

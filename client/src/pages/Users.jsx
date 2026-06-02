@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { authFetch } from '../api.js';
@@ -11,6 +11,45 @@ const ROLE_LABELS = {
   warehouse:  '📦 Warehouse',
 };
 
+const ROLE_COLORS = {
+  boss:       { bg: '#1e293b', text: '#fff' },
+  teamleader: { bg: '#fef3c7', text: '#92400e' },
+  atrium:     { bg: '#dcfce7', text: '#15803d' },
+  cleanskin:  { bg: '#f1f5f9', text: '#334155' },
+  warehouse:  { bg: '#dbeafe', text: '#1e40af' },
+};
+
+const ROLE_AVATAR = {
+  boss:       { bg: '#1e293b', text: '#fff' },
+  teamleader: { bg: '#f59e0b', text: '#fff' },
+  atrium:     { bg: '#16a34a', text: '#fff' },
+  cleanskin:  { bg: '#475569', text: '#fff' },
+  warehouse:  { bg: '#2563eb', text: '#fff' },
+};
+
+function MenuItem({ icon, label, danger, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        width: '100%', padding: '10px 14px',
+        border: 'none', background: 'none', textAlign: 'left',
+        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        fontFamily: 'DM Sans, sans-serif',
+        color: danger ? 'var(--red)' : 'var(--text)',
+        borderBottom: '1px solid var(--border)',
+        transition: 'background 0.1s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = danger ? '#fff1f1' : 'var(--cream)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+    >
+      <span style={{ width: 16, textAlign: 'center', fontSize: 14 }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 export default function Users() {
   const { user: me } = useAuth();
   const { showToast } = useApp();
@@ -18,11 +57,11 @@ export default function Users() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', username: '', role: 'atrium', email: '' });
   const [creating, setCreating] = useState(false);
-
-  // inline panel: 'send' (no email yet) | 'edit' (update email)
-  const [activePanel, setActivePanel] = useState(null); // { id, mode, email }
+  const [menuOpen, setMenuOpen] = useState(null);
+  const [activePanel, setActivePanel] = useState(null);
   const [panelSaving, setPanelSaving] = useState(false);
   const [resendingId, setResendingId] = useState(null);
+  const menuRef = useRef(null);
 
   const isBoss = me?.role === 'boss';
 
@@ -30,47 +69,53 @@ export default function Users() {
     authFetch('/api/auth/users').then(r => r.json()).then(setUsers);
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(null);
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
+  }, [menuOpen]);
+
   function openPanel(uid, mode, existingEmail) {
+    setMenuOpen(null);
     setActivePanel({ id: uid, mode, email: existingEmail || '' });
   }
   function closePanel() { setActivePanel(null); }
 
-  // Send or resend credentials (auto-generates password on server)
   async function sendCredentials(uid, email) {
     if (!email) { showToast('Enter an email address'); return; }
     setPanelSaving(true);
     try {
       const res = await authFetch(`/api/auth/users/${uid}/resend-credentials`, {
-        method: 'POST',
-        body: JSON.stringify({ email }),
+        method: 'POST', body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error); return; }
       setUsers(prev => prev.map(u => (u.id || u._id) === uid ? { ...u, email: data.email } : u));
       closePanel();
       showToast(data.ok ? 'Credentials emailed ✓ — password auto-generated' : 'Email failed — check Settings');
-    } finally {
-      setPanelSaving(false);
-    }
+    } finally { setPanelSaving(false); }
   }
 
-  // Edit email only (no password reset)
   async function saveEmail(uid) {
     if (!activePanel.email) { showToast('Enter an email address'); return; }
     setPanelSaving(true);
     try {
       const res = await authFetch(`/api/auth/users/${uid}/email`, {
-        method: 'PATCH',
-        body: JSON.stringify({ email: activePanel.email }),
+        method: 'PATCH', body: JSON.stringify({ email: activePanel.email }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error || 'Failed'); return; }
       setUsers(prev => prev.map(u => (u.id || u._id) === uid ? { ...u, email: activePanel.email } : u));
       closePanel();
       showToast('Email updated ✓');
-    } finally {
-      setPanelSaving(false);
-    }
+    } finally { setPanelSaving(false); }
   }
 
   async function createUser() {
@@ -84,24 +129,23 @@ export default function Users() {
       setForm({ name: '', username: '', role: 'atrium', email: '' });
       setShowForm(false);
       showToast(data.emailSent ? 'Account created ✓ — login details emailed' : 'Account created ✓ (email failed — check Settings)');
-    } finally {
-      setCreating(false);
-    }
+    } finally { setCreating(false); }
   }
 
-  async function resendCredentials(uid) {
+  async function resendPassword(uid) {
+    setMenuOpen(null);
     setResendingId(uid);
     try {
       const res = await authFetch(`/api/auth/users/${uid}/resend-credentials`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) { showToast(data.error); return; }
       showToast(data.ok ? 'Credentials emailed ✓' : 'Email failed — check Settings');
-    } finally {
-      setResendingId(null);
-    }
+    } finally { setResendingId(null); }
   }
 
   async function deleteUser(id) {
+    setMenuOpen(null);
+    if (!window.confirm('Remove this account?')) return;
     const res = await authFetch(`/api/auth/users/${id}`, { method: 'DELETE' });
     if (!res.ok) { const d = await res.json(); showToast(d.error); return; }
     setUsers(prev => prev.filter(u => (u.id || u._id) !== id));
@@ -109,6 +153,7 @@ export default function Users() {
   }
 
   async function promote(id) {
+    setMenuOpen(null);
     const res = await authFetch(`/api/auth/users/${id}/promote`, { method: 'PATCH' });
     const data = await res.json();
     if (!res.ok) { showToast(data.error); return; }
@@ -117,6 +162,7 @@ export default function Users() {
   }
 
   async function demote(id) {
+    setMenuOpen(null);
     const res = await authFetch(`/api/auth/users/${id}/demote`, { method: 'PATCH' });
     const data = await res.json();
     if (!res.ok) { showToast(data.error); return; }
@@ -180,97 +226,139 @@ export default function Users() {
         </div>
       )}
 
-      <div className="card">
+      <div className="card" style={{ padding: 0, overflow: 'visible' }}>
         {users.length === 0
-          ? <div className="empty"><div className="empty-icon">👤</div>No accounts yet</div>
-          : users.map(u => {
+          ? <div className="empty" style={{ padding: '40px 20px' }}><div className="empty-icon">👤</div>No accounts yet</div>
+          : users.map((u, idx) => {
             const uid = u.id || u._id;
             const manageable = canManage(u);
             const isMe = uid === (me?.id || me?._id);
             const isActive = activePanel?.id === uid;
+            const isMenuOpen = menuOpen === uid;
+            const av = ROLE_AVATAR[u.role] || ROLE_AVATAR.atrium;
+            const rc = ROLE_COLORS[u.role] || ROLE_COLORS.atrium;
+            const isLast = idx === users.length - 1;
 
             return (
-              <div className="stock-item" key={uid} style={isMe ? { background: '#fafaf9' } : {}}>
-                <div style={{ flex: 1 }}>
-                  <div className="stock-name">
-                    {u.name} {isMe && <span style={{ fontSize: 11, background: 'var(--latte)', color: 'var(--espresso)', borderRadius: 3, padding: '1px 6px', fontWeight: 700 }}>You</span>}
+              <div key={uid} style={{
+                padding: '14px 18px',
+                borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                background: isMe ? '#fafffe' : '#fff',
+                borderRadius: idx === 0 ? '10px 10px 0 0' : isLast ? '0 0 10px 10px' : 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                    background: av.bg, color: av.text,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em',
+                  }}>
+                    {u.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="stock-meta">
-                    @{u.username} · {ROLE_LABELS[u.role] || u.role}
-                    {u.originalRole && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(was {ROLE_LABELS[u.originalRole]})</span>}
-                  </div>
-                  {u.email
-                    ? <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>✉ {u.email}</div>
-                    : manageable && <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 2 }}>⚠ No email — click "Send credentials" to add one</div>
-                  }
 
-                  {/* Inline panel */}
-                  {isActive && (
-                    <div style={{ marginTop: 12, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--espresso)', marginBottom: 8 }}>
-                        {activePanel.mode === 'edit' ? `Update email for ${u.name}` : `Send credentials to ${u.name}`}
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>Email address</div>
-                          <input
-                            type="email"
-                            className="form-input"
-                            style={{ fontSize: 12, padding: '5px 8px' }}
-                            placeholder="staff@example.com"
-                            value={activePanel.email}
-                            onChange={e => setActivePanel(a => ({ ...a, email: e.target.value }))}
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                      {activePanel.mode === 'send' && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                          A random password will be generated and emailed automatically.
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{u.name}</span>
+                      {isMe && (
+                        <span style={{ fontSize: 10, background: 'var(--latte)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 700, letterSpacing: '0.03em' }}>YOU</span>
+                      )}
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 7px',
+                        background: rc.bg, color: rc.text,
+                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                      }}>
+                        {ROLE_LABELS[u.role]?.replace(/^.+?\s/, '') || u.role}
+                        {u.originalRole && ` (was ${ROLE_LABELS[u.originalRole]?.replace(/^.+?\s/, '')})`}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      @{u.username}
+                      {u.email && <span> · {u.email}</span>}
+                      {!u.email && manageable && <span style={{ color: '#f59e0b' }}> · ⚠ No email</span>}
+                    </div>
+                  </div>
+
+                  {/* ⋯ menu */}
+                  {manageable && !isActive && (
+                    <div style={{ position: 'relative', flexShrink: 0 }} ref={isMenuOpen ? menuRef : null}>
+                      <button
+                        onClick={() => setMenuOpen(isMenuOpen ? null : uid)}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          border: '1px solid var(--border)',
+                          background: isMenuOpen ? 'var(--foam)' : '#fff',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 16, color: 'var(--text-muted)', letterSpacing: '0.05em',
+                          transition: 'background 0.15s',
+                        }}
+                      >⋯</button>
+
+                      {isMenuOpen && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: 38, zIndex: 100,
+                          background: '#fff', border: '1px solid var(--border)',
+                          borderRadius: 10, boxShadow: 'var(--shadow-lg)',
+                          minWidth: 180, overflow: 'hidden',
+                        }}>
+                          {isBoss && u.role !== 'teamleader' && !['boss','warehouse'].includes(u.role) && (
+                            <MenuItem icon="⭐" label="Make Team Leader" onClick={() => promote(uid)} />
+                          )}
+                          {isBoss && u.role === 'teamleader' && (
+                            <MenuItem icon="↩" label="Remove Team Leader" onClick={() => demote(uid)} />
+                          )}
+                          {u.email ? (
+                            <>
+                              <MenuItem icon="✉" label="Edit email" onClick={() => openPanel(uid, 'edit', u.email)} />
+                              <MenuItem icon="🔑" label="Reset password" onClick={() => resendPassword(uid)} />
+                            </>
+                          ) : (
+                            <MenuItem icon="✉" label="Send credentials" onClick={() => openPanel(uid, 'send', '')} />
+                          )}
+                          <div style={{ borderTop: '1px solid var(--border)' }}>
+                            <MenuItem icon="🗑" label="Remove account" danger onClick={() => deleteUser(uid)} />
+                          </div>
                         </div>
                       )}
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {activePanel.mode === 'edit' ? (
-                          <button className="btn btn-primary btn-sm" onClick={() => saveEmail(uid)} disabled={panelSaving}>
-                            {panelSaving ? <><span className="btn-spinner" /> Saving…</> : 'Save email'}
-                          </button>
-                        ) : (
-                          <button className="btn btn-primary btn-sm" onClick={() => sendCredentials(uid, activePanel.email)} disabled={panelSaving}>
-                            {panelSaving ? <><span className="btn-spinner" /> Sending…</> : 'Generate & send'}
-                          </button>
-                        )}
-                        <button className="btn btn-outline btn-sm" onClick={closePanel} disabled={panelSaving}>Cancel</button>
-                      </div>
                     </div>
                   )}
                 </div>
 
-                {manageable && !isActive && (
-                  <div className="stock-actions" style={{ flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, alignSelf: 'flex-start' }}>
-                    {isBoss && u.role !== 'teamleader' && !['boss','warehouse'].includes(u.role) && (
-                      <button className="btn btn-sm"
-                        style={{ background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a' }}
-                        onClick={() => promote(uid)}>Make TL</button>
+                {/* Inline email panel */}
+                {isActive && (
+                  <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--cream)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--espresso)', marginBottom: 8 }}>
+                      {activePanel.mode === 'edit' ? `Update email for ${u.name}` : `Send credentials to ${u.name}`}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>Email address</div>
+                        <input type="email" className="form-input"
+                          style={{ fontSize: 14, padding: '8px 10px' }}
+                          placeholder="staff@example.com"
+                          value={activePanel.email}
+                          onChange={e => setActivePanel(a => ({ ...a, email: e.target.value }))}
+                          autoFocus />
+                      </div>
+                    </div>
+                    {activePanel.mode === 'send' && (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                        A random password will be generated and emailed automatically.
+                      </div>
                     )}
-                    {isBoss && u.role === 'teamleader' && (
-                      <button className="btn btn-sm btn-outline" onClick={() => demote(uid)}>Remove TL</button>
-                    )}
-                    {u.email ? (
-                      <>
-                        <button className="btn btn-outline btn-sm" onClick={() => openPanel(uid, 'edit', u.email)}>
-                          Edit email
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {activePanel.mode === 'edit' ? (
+                        <button className="btn btn-primary btn-sm" onClick={() => saveEmail(uid)} disabled={panelSaving}>
+                          {panelSaving ? <><span className="btn-spinner" /> Saving…</> : 'Save email'}
                         </button>
-                        <button className="btn btn-outline btn-sm" onClick={() => resendCredentials(uid)}
-                          disabled={resendingId === uid}>
-                          {resendingId === uid ? <><span className="btn-spinner" /> Sending…</> : 'Reset password'}
+                      ) : (
+                        <button className="btn btn-primary btn-sm" onClick={() => sendCredentials(uid, activePanel.email)} disabled={panelSaving}>
+                          {panelSaving ? <><span className="btn-spinner" /> Sending…</> : 'Generate & send'}
                         </button>
-                      </>
-                    ) : (
-                      <button className="btn btn-outline btn-sm" onClick={() => openPanel(uid, 'send', '')}>
-                        Send credentials
-                      </button>
-                    )}
-                    <button className="btn btn-danger btn-sm" onClick={() => deleteUser(uid)}>Remove</button>
+                      )}
+                      <button className="btn btn-outline btn-sm" onClick={closePanel} disabled={panelSaving}>Cancel</button>
+                    </div>
                   </div>
                 )}
               </div>

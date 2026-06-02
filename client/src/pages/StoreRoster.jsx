@@ -28,6 +28,21 @@ const TIMES = [
   '3pm','3:30pm','4pm','4:30pm','5pm','5:30pm','6pm','6:30pm','7pm','7:30pm','8pm','9pm','10pm',
 ];
 
+const STORE_PILL = {
+  Atrium: {
+    bg: '#dcfce7', border: '#86efac', color: '#14532d',
+    timeFg: '#16a34a',
+    meBg: '#16a34a', meBorder: '#16a34a', meColor: '#fff', meTimeFg: '#86efac',
+    youBg: '#fff', youColor: '#15803d',
+  },
+  Cleanskin: {
+    bg: '#1e293b', border: '#334155', color: '#e2e8f0',
+    timeFg: '#64748b',
+    meBg: '#0f172a', meBorder: '#0f172a', meColor: '#f1f5f9', meTimeFg: '#4ade80',
+    youBg: '#16a34a', youColor: '#fff',
+  },
+};
+
 export default function StoreRoster({ role, store }) {
   const { showToast } = useApp();
   const { user } = useAuth();
@@ -279,15 +294,19 @@ export default function StoreRoster({ role, store }) {
                     ? <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
                     : dayShifts.map(s => {
                       const isMe = s.name === user.name;
+                      const th = STORE_PILL[store] || STORE_PILL.Atrium;
                       return (
                         <div
                           className="shift-pill"
                           key={s._id}
-                          style={isMe ? { background: 'var(--espresso)', color: 'var(--cream)', borderColor: 'var(--espresso)', fontWeight: 600 } : {}}
+                          style={isMe
+                            ? { background: th.meBg, color: th.meColor, borderColor: th.meBorder, fontWeight: 600 }
+                            : { background: th.bg, color: th.color, borderColor: th.border }
+                          }
                         >
                           {s.name}
-                          <span className="time" style={isMe ? { color: 'var(--latte)' } : {}}>{s.time}</span>
-                          {isMe && <span style={{ fontSize: 10, background: 'var(--latte)', color: 'var(--espresso)', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>You</span>}
+                          <span className="time" style={{ color: isMe ? th.meTimeFg : th.timeFg }}>{s.time}</span>
+                          {isMe && <span style={{ fontSize: 10, background: th.youBg, color: th.youColor, borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>You</span>}
                           {isBoss && (<>
                             <span
                               onClick={() => {
@@ -300,12 +319,12 @@ export default function StoreRoster({ role, store }) {
                                   nameSelectRef.current?.focus();
                                 }, 50);
                               }}
-                              style={{ cursor: 'pointer', color: isMe ? 'var(--latte)' : 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}
+                              style={{ cursor: 'pointer', color: isMe ? th.meTimeFg : th.timeFg, fontSize: 11, marginLeft: 4, opacity: 0.8 }}
                               title="Edit shift"
                             >✎</span>
                             <span
                               onClick={() => deleteShift(s._id)}
-                              style={{ cursor: 'pointer', color: isMe ? 'var(--latte)' : 'var(--text-muted)', fontSize: 13, marginLeft: 2 }}
+                              style={{ cursor: 'pointer', color: isMe ? th.meTimeFg : th.timeFg, fontSize: 13, marginLeft: 2, opacity: 0.8 }}
                               title="Remove shift"
                             >×</span>
                           </>)}
