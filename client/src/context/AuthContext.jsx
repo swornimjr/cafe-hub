@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { setUnauthorizedHandler } from '../api.js';
 
 const AuthContext = createContext(null);
 
@@ -22,6 +23,10 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('cafehub_user');
     localStorage.removeItem('cafehub_token');
   }
+
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>

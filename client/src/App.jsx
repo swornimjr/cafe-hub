@@ -96,8 +96,8 @@ function ChangePasswordModal({ onClose }) {
 
 function PageComponent({ tab, role, onStockCount }) {
   if (tab === 'dashboard')        return <Dashboard role={role} onStockCount={onStockCount} />;
-  if (tab === 'atrium-roster')    return <StoreRoster role={role} store="Atrium" />;
-  if (tab === 'cleanskin-roster') return <StoreRoster role={role} store="Cleanskin" />;
+  if (tab === 'atrium-roster')    return <StoreRoster key="atrium" role={role} store="Atrium" />;
+  if (tab === 'cleanskin-roster') return <StoreRoster key="cleanskin" role={role} store="Cleanskin" />;
   if (tab === 'stock')            return <Stock role={role} onStockCount={onStockCount} />;
   if (tab === 'menu')             return <Menu />;
   if (tab === 'recipes')          return <Recipes />;

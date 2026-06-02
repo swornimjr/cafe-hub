@@ -4,9 +4,12 @@ function getToken() {
   return localStorage.getItem('cafehub_token');
 }
 
-export function authFetch(url, options = {}) {
+let _onUnauthorized = null;
+export function setUnauthorizedHandler(fn) { _onUnauthorized = fn; }
+
+export async function authFetch(url, options = {}) {
   const token = getToken();
-  return fetch(`${BASE}${url}`, {
+  const res = await fetch(`${BASE}${url}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -14,4 +17,6 @@ export function authFetch(url, options = {}) {
       ...options.headers,
     },
   });
+  if (res.status === 401 && _onUnauthorized) _onUnauthorized();
+  return res;
 }
