@@ -30,9 +30,29 @@ function greeting() {
   return 'Good evening';
 }
 
-const STORE_COLORS = {
-  Atrium:    { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
-  Cleanskin: { bg: '#F0FDF4', text: '#166534', border: '#BBF7D0' },
+const STORE_THEMES = {
+  Atrium: {
+    bg:        '#f0fdf4',
+    headerBg:  '#dcfce7',
+    border:    '#86efac',
+    rowBorder: '#bbf7d0',
+    label:     '#15803d',
+    nameColor: '#14532d',
+    timeColor: '#16a34a',
+    emptyColor:'#6ee7a0',
+    icon:      '☕',
+  },
+  Cleanskin: {
+    bg:        '#0f172a',
+    headerBg:  '#1e293b',
+    border:    '#334155',
+    rowBorder: '#1e293b',
+    label:     '#94a3b8',
+    nameColor: '#f1f5f9',
+    timeColor: '#64748b',
+    emptyColor:'#475569',
+    icon:      '🍽️',
+  },
 };
 
 export default function Dashboard({ role, onStockCount }) {
@@ -146,19 +166,44 @@ export default function Dashboard({ role, onStockCount }) {
   /* ── BOSS VIEW ── */
   return (
     <>
-      <div className="page-title">{greeting()}</div>
-      <div className="page-sub">{dateStr}</div>
+      {/* Greeting banner */}
+      <div style={{
+        background: 'linear-gradient(120deg, var(--espresso) 0%, #2d3f55 100%)',
+        borderRadius: 14, padding: '20px 24px', marginBottom: 20,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        boxShadow: 'var(--shadow-md)',
+      }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>{greeting()}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{dateStr}</div>
+        </div>
+        <div style={{ fontSize: 32, opacity: 0.85 }}>
+          {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
+        </div>
+      </div>
 
       {/* Stat cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className="stat-card">
-          <div className="stat-num" style={pending.length > 0 ? { color: 'var(--amber)' } : {}}>{pending.length}</div>
-          <div className="stat-label">Pending stock</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-num" style={approved.length > 0 ? { color: 'var(--green)' } : {}}>{approved.length}</div>
-          <div className="stat-label">Ready to send</div>
-        </div>
+      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
+        {[
+          { count: pending.length,  label: 'Pending stock',  icon: '📦', color: 'var(--amber)', lightBg: 'var(--amber-light)' },
+          { count: approved.length, label: 'Ready to send',  icon: '✅', color: 'var(--green)', lightBg: 'var(--green-light)' },
+        ].map(({ count, label, icon, color, lightBg }) => (
+          <div key={label} className="stat-card" style={{
+            borderLeft: `3px solid ${count > 0 ? color : 'var(--border)'}`,
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '16px 18px', textAlign: 'left',
+          }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+              background: count > 0 ? lightBg : 'var(--foam)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+            }}>{icon}</div>
+            <div>
+              <div className="stat-num" style={{ color: count > 0 ? color : undefined, fontSize: 26, marginBottom: 2 }}>{count}</div>
+              <div className="stat-label">{label}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Today's roster — both stores */}
@@ -167,21 +212,40 @@ export default function Dashboard({ role, onStockCount }) {
           Today's roster — {todayLabel}
           <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{formatWeekRange(currentWeekOf)}</span>
         </div>
-        <div className="roster-today-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="roster-today-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {[{ store: 'Atrium', shifts: atriumToday }, { store: 'Cleanskin', shifts: cleanskinToday }].map(({ store, shifts }) => {
-            const col = STORE_COLORS[store];
+            const t = STORE_THEMES[store];
             return (
-              <div key={store} style={{ border: `1px solid ${col.border}`, borderRadius: 10, padding: '12px 14px', background: col.bg }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: col.text, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{store}</div>
-                {shifts.length === 0
-                  ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No shifts</div>
-                  : shifts.map(s => (
-                    <div key={s._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '5px 0', borderBottom: `1px solid ${col.border}` }}>
-                      <span style={{ fontWeight: 600 }}>{s.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{s.time}</span>
-                    </div>
-                  ))
-                }
+              <div key={store} style={{ border: `1px solid ${t.border}`, borderRadius: 12, overflow: 'hidden', background: t.bg }}>
+                {/* Store header */}
+                <div style={{
+                  background: t.headerBg, padding: '9px 14px',
+                  borderBottom: `1px solid ${t.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.label, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                    {t.icon} {store}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: t.label, opacity: 0.7 }}>
+                    {shifts.length} staff
+                  </div>
+                </div>
+                {/* Shift rows */}
+                <div style={{ padding: '4px 0' }}>
+                  {shifts.length === 0
+                    ? <div style={{ fontSize: 12, color: t.emptyColor, padding: '10px 14px' }}>No shifts today</div>
+                    : shifts.map((s, i) => (
+                      <div key={s._id} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        fontSize: 13, padding: '7px 14px',
+                        borderBottom: i < shifts.length - 1 ? `1px solid ${t.rowBorder}` : 'none',
+                      }}>
+                        <span style={{ fontWeight: 600, color: t.nameColor }}>{s.name}</span>
+                        <span style={{ color: t.timeColor, fontSize: 12 }}>{s.time}</span>
+                      </div>
+                    ))
+                  }
+                </div>
               </div>
             );
           })}
