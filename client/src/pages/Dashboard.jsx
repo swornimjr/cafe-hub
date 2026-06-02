@@ -33,13 +33,13 @@ function greeting() {
 const STORE_THEMES = {
   Atrium: {
     bg:        '#f0fdf4',
-    headerBg:  '#dcfce7',
-    border:    '#86efac',
+    headerBg:  '#16a34a',
+    border:    '#4ade80',
     rowBorder: '#bbf7d0',
-    label:     '#15803d',
+    label:     '#ffffff',
     nameColor: '#14532d',
-    timeColor: '#16a34a',
-    emptyColor:'#6ee7a0',
+    timeColor: '#15803d',
+    emptyColor:'#86efac',
     icon:      '☕',
   },
   Cleanskin: {
