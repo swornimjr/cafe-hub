@@ -13,6 +13,19 @@ import Recipes from './pages/Recipes.jsx';
 import Settings from './pages/Settings.jsx';
 import { authFetch } from './api.js';
 
+const TAB_ICONS = {
+  dashboard:          '⊞',
+  'atrium-roster':    '📋',
+  'cleanskin-roster': '📋',
+  stock:              '📦',
+  menu:               '☕',
+  recipes:            '📖',
+  orders:             '✅',
+  catalog:            '🗂️',
+  users:              '👥',
+  settings:           '⚙️',
+};
+
 const ROLE_TABS = {
   boss:       ['dashboard','atrium-roster','cleanskin-roster','stock','menu','recipes','catalog','users','settings'],
   teamleader: ['atrium-roster','cleanskin-roster','stock','menu','recipes','users'],
@@ -113,8 +126,14 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState(null);
   const [stockCount, setStockCount] = useState(0);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => { setActiveTab(null); }, [user?.id]);
+
+  function handleTabClick(tab) {
+    setActiveTab(tab);
+    setDrawerOpen(false);
+  }
 
   const tabs = user ? ROLE_TABS[user.role] : [];
   const currentTab = activeTab && tabs.includes(activeTab) ? activeTab : tabs[0];
@@ -132,9 +151,13 @@ function AppInner() {
           </div>
         </div>
         <div className="user-badge">
+          <span className="mobile-tab-label">{TAB_LABELS[currentTab]}</span>
           <strong className="topbar-name">{user.name}</strong>
           <button className="logout-btn" onClick={() => setShowChangePw(true)} title="Change password">🔑</button>
-          <button className="logout-btn" onClick={logout}>Sign out</button>
+          <button className="logout-btn mobile-signout" onClick={logout}>Sign out</button>
+          <button className="hamburger-btn" onClick={() => setDrawerOpen(true)} aria-label="Menu">
+            <span /><span /><span />
+          </button>
         </div>
       </div>
 
@@ -150,6 +173,39 @@ function AppInner() {
           </button>
         ))}
       </nav>
+
+      {drawerOpen && (
+        <div className="drawer-overlay" onClick={() => setDrawerOpen(false)}>
+          <nav className="nav-drawer" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div className="topbar-brand">
+                <div className="dot">☕</div>
+                <div>
+                  <span style={{ color: '#fff', fontSize: 15, fontWeight: 800 }}>Cafe Hub</span>
+                  <small style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>Atrium &amp; Cleanskin</small>
+                </div>
+              </div>
+              <button className="drawer-close" onClick={() => setDrawerOpen(false)}>✕</button>
+            </div>
+            {tabs.map(t => (
+              <button
+                key={t}
+                className={`drawer-item ${currentTab === t ? 'active' : ''}`}
+                onClick={() => handleTabClick(t)}
+              >
+                <span className="drawer-icon">{TAB_ICONS[t]}</span>
+                {TAB_LABELS[t]}
+                {t === 'stock' && user.role === 'boss' && stockCount > 0 && <span className="notif" style={{ marginLeft: 'auto' }} />}
+              </button>
+            ))}
+            <div style={{ marginTop: 'auto', padding: '16px 18px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{user.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize', marginBottom: 12 }}>{user.role}</div>
+              <button className="btn btn-outline btn-sm" style={{ width: '100%' }} onClick={() => { setDrawerOpen(false); logout(); }}>Sign out</button>
+            </div>
+          </nav>
+        </div>
+      )}
 
       <div className="page">
         <PageComponent

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { authFetch } from '../api.js';
 import { weekOfString, formatWeekRange } from '../utils/week.js';
+import { SkeletonCard, SkeletonList } from '../components/Skeleton.jsx';
 
 const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const todayLabel  = DAY_LABELS[new Date().getDay()];
@@ -77,7 +78,15 @@ export default function Dashboard({ role, onStockCount }) {
 
   const dateStr = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 14 }}>Loading…</div>;
+  if (loading) return (
+    <div className="page">
+      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <SkeletonCard lines={2} titleWidth="50%" />
+        <SkeletonCard lines={2} titleWidth="50%" />
+      </div>
+      <SkeletonList rows={4} />
+    </div>
+  );
 
   /* ── STAFF VIEW ── */
   if (!isBoss) {

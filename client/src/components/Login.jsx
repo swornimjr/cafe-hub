@@ -34,9 +34,14 @@ export default function Login() {
 
   return (
     <div className="login-screen">
+      <div className="login-brand">
+        <div className="login-brand-icon">☕</div>
+        <div className="login-brand-name">Cafe Hub</div>
+        <div className="login-brand-sub">Atrium &amp; Cleanskin</div>
+      </div>
       <div className="login-card">
-        <h2>Good morning ☕</h2>
-        <p>Sign in to Cafe Hub</p>
+        <h2>Welcome back</h2>
+        <p>Sign in to your account</p>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Username</label>
@@ -67,3 +72,4 @@ export default function Login() {
     </div>
   );
 }
+

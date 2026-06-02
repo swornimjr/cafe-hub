@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { authFetch } from '../api.js';
+import { SkeletonCard } from '../components/Skeleton.jsx';
 
 const CATEGORIES = [
   { key: 'drink',  label: 'Drinks',  icon: '☕' },
@@ -120,7 +121,7 @@ export default function Menu() {
     items: visible.filter(i => i.category === c.key),
   })).filter(g => g.items.length > 0);
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 14 }}>Loading…</div>;
+  if (loading) return <div className="page"><SkeletonCard lines={3} /><SkeletonCard lines={3} /><SkeletonCard lines={3} /></div>;
 
   return (
     <>
