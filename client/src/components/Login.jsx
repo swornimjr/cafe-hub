@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { authFetch } from '../api.js';
 
@@ -7,6 +7,10 @@ export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    authFetch('/api/health').catch(() => {});
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
