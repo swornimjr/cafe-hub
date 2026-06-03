@@ -55,7 +55,7 @@ const STORE_THEMES = {
   },
 };
 
-export default function Dashboard({ role, onStockCount }) {
+export default function Dashboard({ role, onStockCount, onTabChange }) {
   const { user } = useAuth();
   const { showToast } = useApp();
   const isBoss = role === 'boss';
@@ -76,7 +76,7 @@ export default function Dashboard({ role, onStockCount }) {
     }
     Promise.all(fetches).then(([r, ann, s]) => {
       setShifts(r);
-      setLatestAnnouncements(ann.slice(0, 2));
+      setLatestAnnouncements(ann.slice(0, 1));
       if (s) { setStock(s); onStockCount?.(s.filter(x => x.status === 'pending').length); }
       setLoading(false);
     });
@@ -116,17 +116,38 @@ export default function Dashboard({ role, onStockCount }) {
     const myToday = myShiftsWeek.filter(s => s.day === todayLabel);
     return (
       <>
-        <div className="page-title">{greeting()}, {user?.name?.split(' ')[0]}</div>
-        <div className="page-sub">{dateStr} · {formatWeekRange(currentWeekOf)}</div>
+        {/* Greeting banner — same style as boss */}
+        <div style={{
+          background: 'linear-gradient(120deg, var(--espresso) 0%, #2d3f55 100%)',
+          borderRadius: 14, padding: '20px 24px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: 'var(--shadow-md)',
+        }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+              {greeting()}, {user?.name?.split(' ')[0]}
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{dateStr}</div>
+          </div>
+          <div style={{ fontSize: 32, opacity: 0.85 }}>
+            {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
+          </div>
+        </div>
 
         {/* Announcements banner */}
         {latestAnnouncements.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          <div style={{ marginBottom: 16 }}>
             {latestAnnouncements.map(a => (
               <div key={a._id} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderLeft: '4px solid #f59e0b', borderRadius: 10, padding: '12px 16px' }}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>📢 {a.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.body}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Posted by {a.createdBy}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Posted by {a.createdBy}</div>
+                  <button
+                    onClick={() => onTabChange?.('announcements')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#d97706', fontWeight: 600, padding: 0 }}
+                  >View all →</button>
+                </div>
               </div>
             ))}
           </div>
@@ -197,19 +218,6 @@ export default function Dashboard({ role, onStockCount }) {
           {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
         </div>
       </div>
-
-      {/* Announcements banner */}
-      {latestAnnouncements.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          {latestAnnouncements.map(a => (
-            <div key={a._id} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderLeft: '4px solid #f59e0b', borderRadius: 10, padding: '12px 16px' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>📢 {a.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.body}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Posted by {a.createdBy}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Stat cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>

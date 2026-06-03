@@ -30,10 +30,10 @@ const TAB_ICONS = {
 
 const ROLE_TABS = {
   boss:       ['dashboard','atrium-roster','cleanskin-roster','stock','menu','recipes','announcements','catalog','users','settings'],
-  teamleader: ['atrium-roster','cleanskin-roster','stock','menu','recipes','announcements','users'],
-  atrium:     ['atrium-roster','menu','recipes','announcements'],
-  cleanskin:  ['cleanskin-roster','menu','recipes','announcements'],
-  warehouse:  ['orders','announcements'],
+  teamleader: ['dashboard','atrium-roster','cleanskin-roster','stock','menu','recipes','announcements','users'],
+  atrium:     ['dashboard','atrium-roster','menu','recipes','announcements'],
+  cleanskin:  ['dashboard','cleanskin-roster','menu','recipes','announcements'],
+  warehouse:  ['dashboard','orders','announcements'],
 };
 
 const TAB_LABELS = {
@@ -110,8 +110,8 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
-function PageComponent({ tab, role, onStockCount }) {
-  if (tab === 'dashboard')        return <Dashboard role={role} onStockCount={onStockCount} />;
+function PageComponent({ tab, role, onStockCount, onTabChange }) {
+  if (tab === 'dashboard')        return <Dashboard role={role} onStockCount={onStockCount} onTabChange={onTabChange} />;
   if (tab === 'atrium-roster')    return <StoreRoster key="atrium" role={role} store="Atrium" />;
   if (tab === 'cleanskin-roster') return <StoreRoster key="cleanskin" role={role} store="Cleanskin" />;
   if (tab === 'stock')            return <Stock role={role} onStockCount={onStockCount} />;
@@ -235,6 +235,7 @@ function AppInner() {
           tab={currentTab}
           role={user.role}
           onStockCount={setStockCount}
+          onTabChange={handleTabClick}
         />
       </div>
 
