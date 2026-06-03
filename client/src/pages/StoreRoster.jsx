@@ -135,10 +135,21 @@ export default function StoreRoster({ role, store }) {
     setPublishing(true);
     try {
       const weekRange = formatWeekRange(weekOf);
-      const res = await authFetch('/api/roster/publish', {
-        method: 'POST',
-        body: JSON.stringify({ store, weekOf, weekRange }),
-      });
+      let res;
+      try {
+        res = await authFetch('/api/roster/publish', {
+          method: 'POST',
+          body: JSON.stringify({ store, weekOf, weekRange }),
+        });
+      } catch {
+        showToast('Publish failed — server may be starting up. Try again in a moment.');
+        return;
+      }
+
+      if (!res.ok) {
+        showToast('Publish failed — please try again.');
+        return;
+      }
 
       const emailSent = res.headers.get('X-Email-Sent') === 'true';
       const staffNotified = parseInt(res.headers.get('X-Staff-Notified') || '0', 10);
@@ -184,10 +195,17 @@ export default function StoreRoster({ role, store }) {
     setNotifying(true);
     try {
       const weekRange = formatWeekRange(weekOf);
-      const res = await authFetch('/api/roster/notify-changes', {
-        method: 'POST',
-        body: JSON.stringify({ store, weekOf, weekRange, changes: pendingChanges }),
-      });
+      let res;
+      try {
+        res = await authFetch('/api/roster/notify-changes', {
+          method: 'POST',
+          body: JSON.stringify({ store, weekOf, weekRange, changes: pendingChanges }),
+        });
+      } catch {
+        showToast('Notify failed — server may be starting up. Try again.');
+        return;
+      }
+      if (!res.ok) { showToast('Notify failed — please try again.'); return; }
       const data = await res.json();
       setPendingChanges([]);
       showToast(`Notified ${data.notified} staff member${data.notified === 1 ? '' : 's'} ✓`);
