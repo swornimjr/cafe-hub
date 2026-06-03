@@ -20,7 +20,11 @@ const app = express();
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173'];
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  exposedHeaders: ['X-Email-Sent', 'X-Staff-Notified', 'X-Staff-Failed', 'X-Staff-No-Email', 'X-Published', 'X-Published-At'],
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);

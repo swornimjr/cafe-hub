@@ -32,7 +32,7 @@ function greeting() {
 
 const STORE_THEMES = {
   Atrium: {
-    bg:        '#f0fdf4',
+    bg:        '#a8f6bf',
     headerBg:  '#16a34a',
     border:    '#4ade80',
     rowBorder: '#bbf7d0',
@@ -43,7 +43,7 @@ const STORE_THEMES = {
     icon:      '☕',
   },
   Cleanskin: {
-    bg:        '#0f172a',
+    bg:        '#343c4d',
     headerBg:  '#1e293b',
     border:    '#334155',
     rowBorder: '#1e293b',

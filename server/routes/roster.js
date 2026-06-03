@@ -147,9 +147,12 @@ router.post('/publish', requireBoss, async (req, res) => {
   storeStaff.forEach(u => { if (u.email) emailMap[u.name] = u.email; });
   const DAYS_ORDER = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const staffWithShifts = [...new Set(shifts.map(s => s.name))];
+  let staffNotified = 0;
+  let staffFailed = 0;
+  let staffNoEmail = 0;
   for (const name of staffWithShifts) {
     const email = emailMap[name];
-    if (!email) continue;
+    if (!email) { staffNoEmail++; continue; }
     const myShifts = shifts
       .filter(s => s.name === name)
       .sort((a, b) => DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day));
@@ -160,8 +163,10 @@ router.post('/publish', requireBoss, async (req, res) => {
         subject: `Your ${store} roster — ${weekRange || weekOf}`,
         text: `Hi ${name},\n\nYour roster for ${weekRange || weekOf} has been published.\n\nYour shifts this week:\n${shiftLines}\n\nLog in to Cafe Hub to view the full roster.\n\nCafe Hub`,
       });
+      staffNotified++;
     } catch (err) {
-      console.error(`Notification failed for ${name}:`, err.message);
+      staffFailed++;
+      console.error(`Roster notification failed for ${name} (${email}):`, err.message);
     }
   }
 
@@ -169,6 +174,9 @@ router.post('/publish', requireBoss, async (req, res) => {
     'Content-Type': 'application/pdf',
     'Content-Disposition': `attachment; filename="${filename}"`,
     'X-Email-Sent': emailSent ? 'true' : 'false',
+    'X-Staff-Notified': String(staffNotified),
+    'X-Staff-Failed': String(staffFailed),
+    'X-Staff-No-Email': String(staffNoEmail),
     'X-Published': 'true',
     'X-Published-At': pub.publishedAt.toISOString(),
   });

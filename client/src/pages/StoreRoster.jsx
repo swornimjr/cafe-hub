@@ -31,13 +31,13 @@ const TIMES = [
 const STORE_PILL = {
   Atrium: {
     bg: '#dcfce7', border: '#86efac', color: '#14532d',
-    timeFg: '#16a34a',
+    timeFg: 'rgb(0, 0, 0)',
     meBg: '#16a34a', meBorder: '#16a34a', meColor: '#fff', meTimeFg: '#86efac',
     youBg: '#fff', youColor: '#15803d',
   },
   Cleanskin: {
     bg: '#1e293b', border: '#334155', color: '#e2e8f0',
-    timeFg: '#64748b',
+    timeFg: '#ffffff',
     meBg: '#0f172a', meBorder: '#0f172a', meColor: '#f1f5f9', meTimeFg: '#4ade80',
     youBg: '#16a34a', youColor: '#fff',
   },
@@ -141,6 +141,9 @@ export default function StoreRoster({ role, store }) {
       });
 
       const emailSent = res.headers.get('X-Email-Sent') === 'true';
+      const staffNotified = parseInt(res.headers.get('X-Staff-Notified') || '0', 10);
+      const staffFailed = parseInt(res.headers.get('X-Staff-Failed') || '0', 10);
+      const staffNoEmail = parseInt(res.headers.get('X-Staff-No-Email') || '0', 10);
       const publishedAt = res.headers.get('X-Published-At');
 
       const blob = await res.blob();
@@ -153,7 +156,7 @@ export default function StoreRoster({ role, store }) {
 
       setPublished(true);
       setPublishedAt(publishedAt);
-      setPublishResult({ emailSent, weekRange });
+      setPublishResult({ emailSent, staffNotified, staffFailed, staffNoEmail, weekRange });
       showToast(`${store} roster published ✓`);
     } finally {
       setPublishing(false);
@@ -257,9 +260,27 @@ export default function StoreRoster({ role, store }) {
         <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '14px 18px', marginBottom: 16, position: 'relative' }}>
           <button style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }} onClick={() => setPublishResult(null)}>✕</button>
           <div style={{ fontWeight: 600, color: '#166534', marginBottom: 4 }}>{store} roster published — {publishResult.weekRange}</div>
-          <div style={{ fontSize: 13, color: '#166534', marginBottom: 10 }}>
-            {publishResult.emailSent ? '✓ Email sent' : '⚠ Email not sent (check Settings)'}
+          <div style={{ fontSize: 13, color: '#166534', marginBottom: 6 }}>
+            {publishResult.emailSent ? '✓ Roster PDF emailed to store' : '⚠ Store email not sent (check Settings)'}
             {' · '}PDF downloaded
+          </div>
+          <div style={{ fontSize: 13, marginBottom: 10 }}>
+            {publishResult.staffNotified > 0 && (
+              <span style={{ color: '#166534' }}>✓ {publishResult.staffNotified} staff notified by email</span>
+            )}
+            {publishResult.staffFailed > 0 && (
+              <span style={{ color: '#b45309', marginLeft: publishResult.staffNotified > 0 ? 8 : 0 }}>
+                ⚠ {publishResult.staffFailed} staff email{publishResult.staffFailed > 1 ? 's' : ''} failed — check email settings or verify your domain in Resend
+              </span>
+            )}
+            {publishResult.staffNoEmail > 0 && (
+              <span style={{ color: '#6b7280', marginLeft: (publishResult.staffNotified > 0 || publishResult.staffFailed > 0) ? 8 : 0 }}>
+                · {publishResult.staffNoEmail} staff have no email saved
+              </span>
+            )}
+            {publishResult.staffNotified === 0 && publishResult.staffFailed === 0 && publishResult.staffNoEmail === 0 && (
+              <span style={{ color: '#6b7280' }}>No staff on this roster</span>
+            )}
           </div>
           <button
             className="btn btn-sm"
