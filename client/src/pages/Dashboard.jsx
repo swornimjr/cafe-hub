@@ -64,16 +64,19 @@ export default function Dashboard({ role, onStockCount }) {
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState(null);
+  const [latestAnnouncements, setLatestAnnouncements] = useState([]);
 
   useEffect(() => {
     const fetches = [
       authFetch(`/api/roster?weekOf=${currentWeekOf}`).then(r => r.json()),
+      authFetch('/api/announcements').then(r => r.json()),
     ];
     if (isBoss) {
       fetches.push(authFetch('/api/stock').then(r => r.json()));
     }
-    Promise.all(fetches).then(([r, s]) => {
+    Promise.all(fetches).then(([r, ann, s]) => {
       setShifts(r);
+      setLatestAnnouncements(ann.slice(0, 2));
       if (s) { setStock(s); onStockCount?.(s.filter(x => x.status === 'pending').length); }
       setLoading(false);
     });
@@ -115,6 +118,19 @@ export default function Dashboard({ role, onStockCount }) {
       <>
         <div className="page-title">{greeting()}, {user?.name?.split(' ')[0]}</div>
         <div className="page-sub">{dateStr} · {formatWeekRange(currentWeekOf)}</div>
+
+        {/* Announcements banner */}
+        {latestAnnouncements.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {latestAnnouncements.map(a => (
+              <div key={a._id} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderLeft: '4px solid #f59e0b', borderRadius: 10, padding: '12px 16px' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>📢 {a.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.body}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Posted by {a.createdBy}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Today card */}
         <div className="card">
@@ -181,6 +197,19 @@ export default function Dashboard({ role, onStockCount }) {
           {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
         </div>
       </div>
+
+      {/* Announcements banner */}
+      {latestAnnouncements.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+          {latestAnnouncements.map(a => (
+            <div key={a._id} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderLeft: '4px solid #f59e0b', borderRadius: 10, padding: '12px 16px' }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>📢 {a.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.body}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Posted by {a.createdBy}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>

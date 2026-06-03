@@ -12,6 +12,7 @@ import productsRouter from './routes/products.js';
 import settingsRouter from './routes/settings.js';
 import menuRouter from './routes/menu.js';
 import recipesRouter from './routes/recipes.js';
+import announcementsRouter from './routes/announcements.js';
 import { requireAuth } from './middleware/auth.js';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api/products', requireAuth, productsRouter);
 app.use('/api/settings', requireAuth, settingsRouter);
 app.use('/api/menu', requireAuth, menuRouter);
 app.use('/api/recipes', requireAuth, recipesRouter);
+app.use('/api/announcements', requireAuth, announcementsRouter);
 
 app.get('/api/health', async (req, res) => {
   try {

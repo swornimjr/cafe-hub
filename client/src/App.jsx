@@ -10,6 +10,7 @@ import Users from './pages/Users.jsx';
 import Catalog from './pages/Catalog.jsx';
 import Menu from './pages/Menu.jsx';
 import Recipes from './pages/Recipes.jsx';
+import Announcements from './pages/Announcements.jsx';
 import Settings from './pages/Settings.jsx';
 import { authFetch } from './api.js';
 
@@ -20,6 +21,7 @@ const TAB_ICONS = {
   stock:              '📦',
   menu:               '☕',
   recipes:            '📖',
+  announcements:      '📢',
   orders:             '✅',
   catalog:            '🗂️',
   users:              '👥',
@@ -27,11 +29,11 @@ const TAB_ICONS = {
 };
 
 const ROLE_TABS = {
-  boss:       ['dashboard','atrium-roster','cleanskin-roster','stock','menu','recipes','catalog','users','settings'],
-  teamleader: ['atrium-roster','cleanskin-roster','stock','menu','recipes','users'],
-  atrium:     ['atrium-roster','menu','recipes'],
-  cleanskin:  ['cleanskin-roster','menu','recipes'],
-  warehouse:  ['orders'],
+  boss:       ['dashboard','atrium-roster','cleanskin-roster','stock','menu','recipes','announcements','catalog','users','settings'],
+  teamleader: ['atrium-roster','cleanskin-roster','stock','menu','recipes','announcements','users'],
+  atrium:     ['atrium-roster','menu','recipes','announcements'],
+  cleanskin:  ['cleanskin-roster','menu','recipes','announcements'],
+  warehouse:  ['orders','announcements'],
 };
 
 const TAB_LABELS = {
@@ -41,6 +43,7 @@ const TAB_LABELS = {
   stock:              'Stock Orders',
   menu:               'Menu',
   recipes:            'Recipes',
+  announcements:      'Announcements',
   orders:             'Approved Orders',
   catalog:            'Product Catalog',
   users:              'Staff Accounts',
@@ -114,6 +117,7 @@ function PageComponent({ tab, role, onStockCount }) {
   if (tab === 'stock')            return <Stock role={role} onStockCount={onStockCount} />;
   if (tab === 'menu')             return <Menu />;
   if (tab === 'recipes')          return <Recipes />;
+  if (tab === 'announcements')    return <Announcements />;
   if (tab === 'orders')           return <Orders />;
   if (tab === 'catalog')          return <Catalog />;
   if (tab === 'users')            return <Users />;
@@ -127,12 +131,29 @@ function AppInner() {
   const [stockCount, setStockCount] = useState(0);
   const [showChangePw, setShowChangePw] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [announcementDot, setAnnouncementDot] = useState(false);
 
   useEffect(() => { setActiveTab(null); }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    authFetch('/api/announcements').then(r => r.json()).then(data => {
+      if (!data.length) return;
+      const latest = data[0]._id;
+      const seen = localStorage.getItem(`cafehub_ann_seen_${user.id}`);
+      setAnnouncementDot(seen !== latest);
+    }).catch(() => {});
+  }, [user]);
 
   function handleTabClick(tab) {
     setActiveTab(tab);
     setDrawerOpen(false);
+    if (tab === 'announcements') {
+      authFetch('/api/announcements').then(r => r.json()).then(data => {
+        if (data.length) localStorage.setItem(`cafehub_ann_seen_${user.id}`, data[0]._id);
+        setAnnouncementDot(false);
+      }).catch(() => {});
+    }
   }
 
   const tabs = user ? ROLE_TABS[user.role] : [];
@@ -166,10 +187,11 @@ function AppInner() {
           <button
             key={t}
             className={`nav-tab ${currentTab === t ? 'active' : ''}`}
-            onClick={() => setActiveTab(t)}
+            onClick={() => handleTabClick(t)}
           >
             {TAB_LABELS[t]}
             {t === 'stock' && user.role === 'boss' && stockCount > 0 && <span className="notif" />}
+            {t === 'announcements' && announcementDot && <span className="notif" />}
           </button>
         ))}
       </nav>
@@ -196,6 +218,7 @@ function AppInner() {
                 <span className="drawer-icon">{TAB_ICONS[t]}</span>
                 {TAB_LABELS[t]}
                 {t === 'stock' && user.role === 'boss' && stockCount > 0 && <span className="notif" style={{ marginLeft: 'auto' }} />}
+                {t === 'announcements' && announcementDot && <span className="notif" style={{ marginLeft: 'auto' }} />}
               </button>
             ))}
             <div style={{ marginTop: 'auto', padding: '16px 18px', borderTop: '1px solid var(--border)' }}>
