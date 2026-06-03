@@ -9,10 +9,11 @@ export function setUnauthorizedHandler(fn) { _onUnauthorized = fn; }
 
 export async function authFetch(url, options = {}) {
   const token = getToken();
+  const isFormData = options.body instanceof FormData;
   const res = await fetch(`${BASE}${url}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },

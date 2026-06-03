@@ -1,8 +1,29 @@
 import express from 'express';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
 import Announcement from '../models/Announcement.js';
 import User from '../models/User.js';
 import { requireTeamLeaderOrBoss } from '../middleware/auth.js';
 import { sendEmail } from '../utils/email.js';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+function uploadToCloudinary(buffer, mimetype) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'cafe-hub/announcements', resource_type: 'image' },
+      (err, result) => err ? reject(err) : resolve(result)
+    );
+    Readable.from(buffer).pipe(stream);
+  });
+}
 
 const router = express.Router();
 
@@ -12,14 +33,30 @@ router.get('/', async (req, res) => {
   res.json(announcements);
 });
 
-// Create announcement (boss/TL only) — emails all staff with an email on file
-router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
+// Create announcement (boss/TL only)
+router.post('/', requireTeamLeaderOrBoss, upload.single('image'), async (req, res) => {
   const { title, body } = req.body;
   if (!title || !body) return res.status(400).json({ error: 'Title and message are required' });
 
-  const announcement = await Announcement.create({ title, body, createdBy: req.user.name });
+  let imageUrl = '';
+  let imagePublicId = '';
 
-  // Email all staff who have an email saved (non-boss roles)
+  if (req.file) {
+    try {
+      const result = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
+      imageUrl = result.secure_url;
+      imagePublicId = result.public_id;
+    } catch (err) {
+      console.error('Cloudinary upload failed:', err.message);
+      return res.status(500).json({ error: 'Image upload failed' });
+    }
+  }
+
+  const announcement = await Announcement.create({
+    title, body, createdBy: req.user.name, imageUrl, imagePublicId,
+  });
+
+  // Email all staff with an email saved
   const staff = await User.find({ role: { $ne: 'boss' }, email: { $ne: '' } }).select('name email');
   let notified = 0;
   for (const member of staff) {
@@ -30,6 +67,7 @@ router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
         text: `Hi ${member.name},\n\nThere's a new announcement from ${req.user.name}. Log in to Cafe Hub to read it.\n\nhttps://cafehubs.vercel.app/\n\nCafe Hub`,
       });
       notified++;
+      await new Promise(r => setTimeout(r, 600));
     } catch (err) {
       console.error(`Announcement email failed for ${member.name}:`, err.message);
     }
@@ -38,9 +76,20 @@ router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
   res.status(201).json({ ...announcement.toObject(), notified });
 });
 
-// Delete announcement (boss/TL only)
+// Delete announcement (boss/TL only) — also removes image from Cloudinary
 router.delete('/:id', requireTeamLeaderOrBoss, async (req, res) => {
-  await Announcement.findByIdAndDelete(req.params.id);
+  const announcement = await Announcement.findById(req.params.id);
+  if (!announcement) return res.status(404).json({ error: 'Not found' });
+
+  if (announcement.imagePublicId) {
+    try {
+      await cloudinary.uploader.destroy(announcement.imagePublicId);
+    } catch (err) {
+      console.error('Cloudinary delete failed:', err.message);
+    }
+  }
+
+  await announcement.deleteOne();
   res.json({ ok: true });
 });
 
