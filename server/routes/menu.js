@@ -15,14 +15,37 @@ router.get('/', async (req, res) => {
   res.json(items);
 });
 
+const VALID_CATEGORIES = ['drink', 'food', 'retail'];
+
+function sanitizeMenuItem(body) {
+  return {
+    name: String(body.name || '').trim().slice(0, 100),
+    category: String(body.category || ''),
+    sellingPrice: Number(body.sellingPrice) || 0,
+    ingredients: Array.isArray(body.ingredients)
+      ? body.ingredients.slice(0, 50).map(i => ({
+          name: String(i.name || '').trim().slice(0, 80),
+          amount: String(i.amount || '').trim().slice(0, 30),
+        }))
+      : [],
+    notes: String(body.notes || '').trim().slice(0, 500),
+  };
+}
+
 // Boss / team leader only
 router.post('/', requireManager, async (req, res) => {
-  const item = await MenuItem.create(req.body);
+  const data = sanitizeMenuItem(req.body);
+  if (!data.name) return res.status(400).json({ error: 'Name is required' });
+  if (!VALID_CATEGORIES.includes(data.category)) return res.status(400).json({ error: 'Invalid category' });
+  const item = await MenuItem.create(data);
   res.status(201).json(item);
 });
 
 router.patch('/:id', requireManager, async (req, res) => {
-  const item = await MenuItem.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const data = sanitizeMenuItem(req.body);
+  if (!data.name) return res.status(400).json({ error: 'Name is required' });
+  if (!VALID_CATEGORIES.includes(data.category)) return res.status(400).json({ error: 'Invalid category' });
+  const item = await MenuItem.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
   if (!item) return res.status(404).json({ error: 'Not found' });
   res.json(item);
 });

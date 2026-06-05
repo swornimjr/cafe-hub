@@ -12,9 +12,22 @@ router.get('/', async (req, res) => {
   res.json(items);
 });
 
+const VALID_STORES = ['Atrium', 'Cleanskin'];
+const VALID_STATUS = ['pending', 'approved', 'sent'];
+
 router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
+  const item_name = String(req.body.item || '').trim().slice(0, 100);
+  const unit = String(req.body.unit || '').trim().slice(0, 30);
+  const qty = String(req.body.qty || '').trim().slice(0, 30);
+  const store = String(req.body.store || '');
+  const note = String(req.body.note || '').trim().slice(0, 300);
+  const urgent = Boolean(req.body.urgent);
+
+  if (!item_name || !qty || !store) return res.status(400).json({ error: 'Item, qty and store are required' });
+  if (!VALID_STORES.includes(store)) return res.status(400).json({ error: 'Invalid store' });
+
   const item = await StockRequest.create({
-    ...req.body,
+    item: item_name, unit, qty, store, note, urgent,
     orderedBy: req.user.username,
     status: req.user.role === 'boss' ? 'approved' : 'pending',
   });
@@ -22,7 +35,15 @@ router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
 });
 
 router.patch('/:id', requireBoss, async (req, res) => {
-  const item = await StockRequest.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const allowed = {};
+  if (req.body.status !== undefined) {
+    const status = String(req.body.status);
+    if (!VALID_STATUS.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    allowed.status = status;
+  }
+  if (req.body.note !== undefined) allowed.note = String(req.body.note).trim().slice(0, 300);
+  if (req.body.qty !== undefined) allowed.qty = String(req.body.qty).trim().slice(0, 30);
+  const item = await StockRequest.findByIdAndUpdate(req.params.id, allowed, { new: true });
   res.json(item);
 });
 

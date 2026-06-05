@@ -2,6 +2,7 @@ import tls from 'tls';
 tls.DEFAULT_MAX_VERSION = 'TLSv1.2';
 import express from 'express';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRouter from './routes/auth.js';
@@ -27,6 +28,7 @@ app.use(cors({
   exposedHeaders: ['X-Email-Sent', 'X-Staff-Notified', 'X-Staff-Failed', 'X-Staff-No-Email', 'X-Published', 'X-Published-At'],
 }));
 app.use(express.json());
+app.use(mongoSanitize());
 
 app.use('/api/auth', authRouter);
 app.use('/api/roster', requireAuth, rosterRouter);

@@ -6,6 +6,9 @@ import { sendEmail } from '../utils/email.js';
 
 const router = express.Router();
 
+const VALID_ROLES = ['boss', 'teamleader', 'atrium', 'cleanskin', 'warehouse'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function sendCredentials(to, name, username, password) {
   if (!to) return false;
   try {
@@ -23,7 +26,9 @@ async function sendCredentials(to, name, username, password) {
 
 // Login
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const username = String(req.body.username || '').trim().slice(0, 50);
+  const password = String(req.body.password || '').slice(0, 100);
+  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   const user = await User.findOne({ username });
   if (!user || !(await user.comparePassword(password))) {
     return res.status(401).json({ error: 'Invalid username or password' });
@@ -44,9 +49,19 @@ router.get('/users', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
 
 // Create user
 router.post('/users', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
-  const { name, username, role, email } = req.body;
+  const name = String(req.body.name || '').trim().slice(0, 80);
+  const username = String(req.body.username || '').trim().toLowerCase().slice(0, 30);
+  const role = String(req.body.role || '');
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 100);
+
   if (!name || !username || !role || !email) {
     return res.status(400).json({ error: 'Name, username, role and email are required' });
+  }
+  if (!VALID_ROLES.includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
   }
   if (req.user.role === 'teamleader' && ['boss', 'teamleader'].includes(role)) {
     return res.status(403).json({ error: 'Team leaders can only create staff accounts' });
@@ -84,12 +99,14 @@ router.patch('/users/:id/password', requireAuth, requireTeamLeaderOrBoss, async 
   if (req.user.role === 'teamleader' && ['boss', 'teamleader'].includes(user.role)) {
     return res.status(403).json({ error: 'Team leaders cannot reset boss or team leader passwords' });
   }
-  const { password, sendEmail } = req.body;
+  const password = String(req.body.password || '').slice(0, 100);
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  const shouldSendEmail = req.body.sendEmail;
   user.password = password;
   await user.save();
 
   let emailSent = false;
-  if (sendEmail && user.email) {
+  if (shouldSendEmail && user.email) {
     emailSent = await sendCredentials(user.email, user.name, user.username, password);
   }
 
@@ -98,18 +115,22 @@ router.patch('/users/:id/password', requireAuth, requireTeamLeaderOrBoss, async 
 
 // Update own email (any logged-in user)
 router.patch('/me/email', requireAuth, async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 100);
+  if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  user.email = req.body.email || '';
+  user.email = email;
   await user.save();
   res.json({ ok: true });
 });
 
 // Update another user's email (boss/TL)
 router.patch('/users/:id/email', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 100);
+  if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  user.email = req.body.email || '';
+  user.email = email;
   await user.save();
   res.json({ ok: true, email: user.email });
 });
@@ -119,9 +140,10 @@ router.post('/users/:id/resend-credentials', requireAuth, requireTeamLeaderOrBos
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  // Allow updating email in the same call
   if (req.body.email) {
-    user.email = req.body.email;
+    const email = String(req.body.email).trim().toLowerCase().slice(0, 100);
+    if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
+    user.email = email;
   }
   if (!user.email) return res.status(400).json({ error: 'No email address provided' });
 
@@ -137,9 +159,13 @@ router.post('/users/:id/resend-credentials', requireAuth, requireTeamLeaderOrBos
 
 // Change own password (any logged-in user)
 router.patch('/me/password', requireAuth, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const currentPassword = String(req.body.currentPassword || '').slice(0, 100);
+  const newPassword = String(req.body.newPassword || '').slice(0, 100);
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Both current and new password required' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
   }
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
