@@ -184,7 +184,7 @@ export default function Stock({ role, onStockCount }) {
     <>
       <div className="page-title">Stock Orders</div>
       <div className="page-sub">
-        {isBoss ? 'Approve orders and send to supplier as PDF' : isTeamLeader ? 'Build orders for your stores — boss will approve and send' : 'View your store orders'}
+        {isBoss ? 'Approve orders and send to storeroom as PDF' : isTeamLeader ? 'Build orders for your stores — boss will approve and send' : 'View your store orders'}
       </div>
 
       {/* Action bar */}
@@ -201,7 +201,7 @@ export default function Stock({ role, onStockCount }) {
         )}
         {isBoss && approvedCount > 0 && (
           <button className="btn btn-green" onClick={sendOrder} disabled={sending}>
-            {sending ? <><span className="btn-spinner" /> Sending…</> : `Send to supplier (${approvedCount} approved)`}
+            {sending ? <><span className="btn-spinner" /> Sending…</> : `Send to storeroom (${approvedCount} approved)`}
           </button>
         )}
       </div>
@@ -212,7 +212,7 @@ export default function Stock({ role, onStockCount }) {
           <button style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }} onClick={() => setSentResult(null)}>✕</button>
           <div style={{ fontWeight: 600, color: '#166534', marginBottom: 4 }}>Order sent — {sentResult.itemCount} items</div>
           <div style={{ fontSize: 13, color: '#166534', marginBottom: sentResult.waNumber ? 10 : 0 }}>
-            {sentResult.emailSent ? '✓ Email sent to supplier' : '⚠ Email not sent (check SMTP in .env)'}
+            {sentResult.emailSent ? '✓ Email sent to storeroom' : '⚠ Email not sent (check Settings)'}
             {' · '}PDF downloaded
           </div>
           {sentResult.waNumber && (
