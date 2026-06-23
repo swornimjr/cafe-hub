@@ -2,20 +2,21 @@ import express from 'express';
 import StockRequest from '../models/StockRequest.js';
 import Settings from '../models/Settings.js';
 import { requireBoss, requireTeamLeaderOrBoss } from '../middleware/auth.js';
+import { handle } from '../middleware/asyncHandler.js';
 import { generateOrderPdf } from '../utils/generateOrderPdf.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  const items = await StockRequest.find().sort({ createdAt: -1 });
-  res.json(items);
-});
-
 const VALID_STORES = ['Atrium', 'Cleanskin'];
 const VALID_STATUS = ['pending', 'approved', 'sent'];
 
-router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
+router.get('/', handle(async (req, res) => {
+  const items = await StockRequest.find().sort({ createdAt: -1 });
+  res.json(items);
+}));
+
+router.post('/', requireTeamLeaderOrBoss, handle(async (req, res) => {
   const item_name = String(req.body.item || '').trim().slice(0, 100);
   const unit = String(req.body.unit || '').trim().slice(0, 30);
   const qty = String(req.body.qty || '').trim().slice(0, 30);
@@ -32,27 +33,40 @@ router.post('/', requireTeamLeaderOrBoss, async (req, res) => {
     status: req.user.role === 'boss' ? 'approved' : 'pending',
   });
   res.status(201).json(item);
-});
+}));
 
-router.patch('/:id', requireBoss, async (req, res) => {
+// Boss can change status/qty/note; warehouse can only mark approved → sent
+router.patch('/:id', handle(async (req, res) => {
+  const { role } = req.user;
+  const isBoss = role === 'boss';
+  const isWarehouse = role === 'warehouse';
+  if (!isBoss && !isWarehouse) return res.status(403).json({ error: 'Not authorized' });
+
   const allowed = {};
-  if (req.body.status !== undefined) {
-    const status = String(req.body.status);
-    if (!VALID_STATUS.includes(status)) return res.status(400).json({ error: 'Invalid status' });
-    allowed.status = status;
+  if (isWarehouse) {
+    if (req.body.status !== 'sent') return res.status(403).json({ error: 'Warehouse can only mark items as fulfilled' });
+    allowed.status = 'sent';
+  } else {
+    if (req.body.status !== undefined) {
+      const status = String(req.body.status);
+      if (!VALID_STATUS.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+      allowed.status = status;
+    }
+    if (req.body.note !== undefined) allowed.note = String(req.body.note).trim().slice(0, 300);
+    if (req.body.qty !== undefined) allowed.qty = String(req.body.qty).trim().slice(0, 30);
   }
-  if (req.body.note !== undefined) allowed.note = String(req.body.note).trim().slice(0, 300);
-  if (req.body.qty !== undefined) allowed.qty = String(req.body.qty).trim().slice(0, 30);
-  const item = await StockRequest.findByIdAndUpdate(req.params.id, allowed, { new: true });
-  res.json(item);
-});
 
-router.delete('/:id', requireBoss, async (req, res) => {
+  const item = await StockRequest.findByIdAndUpdate(req.params.id, allowed, { new: true });
+  if (!item) return res.status(404).json({ error: 'Not found' });
+  res.json(item);
+}));
+
+router.delete('/:id', requireBoss, handle(async (req, res) => {
   await StockRequest.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
-});
+}));
 
-router.post('/send', requireBoss, async (req, res) => {
+router.post('/send', requireBoss, handle(async (req, res) => {
   const approved = await StockRequest.find({ status: 'approved' }).sort({ store: 1, createdAt: 1 });
   if (!approved.length) return res.status(400).json({ error: 'No approved orders to send' });
 
@@ -62,11 +76,9 @@ router.post('/send', requireBoss, async (req, res) => {
 
   const pdfBuffer = await generateOrderPdf(approved, dateStr);
 
-  // Mark all as sent
   const ids = approved.map(o => o._id);
   await StockRequest.updateMany({ _id: { $in: ids } }, { status: 'sent' });
 
-  // Email if configured
   let emailSent = false;
   if (settings?.supplierEmail) {
     try {
@@ -94,6 +106,6 @@ router.post('/send', requireBoss, async (req, res) => {
     'X-WhatsApp-Number': settings?.supplierWhatsApp || '',
   });
   res.send(pdfBuffer);
-});
+}));
 
 export default router;

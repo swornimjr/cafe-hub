@@ -76,16 +76,21 @@ export default function Stock({ role, onStockCount }) {
     if (cart.length === 0) { showToast('Add at least one item'); return; }
     setOrdering(true);
     try {
-      await Promise.all(cart.map(c =>
+      const results = await Promise.all(cart.map(c =>
         authFetch('/api/stock', {
           method: 'POST',
           body: JSON.stringify({ item: c.item, unit: c.unit, qty: c.qty, store: c.store, note: c.note, urgent: c.urgent }),
         })
       ));
-      setCart([]);
-      setLine(myStore ? { ...blankLine, store: myStore } : blankLine);
-      setShowForm(false);
-      showToast(`${cart.length} item${cart.length > 1 ? 's' : ''} ordered ✓`);
+      const failed = results.filter(r => !r.ok);
+      if (failed.length) {
+        showToast(`${failed.length} item${failed.length > 1 ? 's' : ''} failed to save — try again`);
+      } else {
+        setCart([]);
+        setLine(myStore ? { ...blankLine, store: myStore } : blankLine);
+        setShowForm(false);
+        showToast(`${cart.length} item${cart.length > 1 ? 's' : ''} ordered ✓`);
+      }
       await load();
     } finally {
       setOrdering(false);

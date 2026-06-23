@@ -5,6 +5,7 @@ import { Readable } from 'stream';
 import Announcement from '../models/Announcement.js';
 import User from '../models/User.js';
 import { requireTeamLeaderOrBoss } from '../middleware/auth.js';
+import { handle } from '../middleware/asyncHandler.js';
 import { sendEmail } from '../utils/email.js';
 
 cloudinary.config({
@@ -27,15 +28,14 @@ function uploadToCloudinary(buffer, mimetype) {
 
 const router = express.Router();
 
-// Get all announcements (all staff)
-router.get('/', async (req, res) => {
+router.get('/', handle(async (req, res) => {
   const announcements = await Announcement.find().sort({ createdAt: -1 });
   res.json(announcements);
-});
+}));
 
-// Create announcement (boss/TL only)
-router.post('/', requireTeamLeaderOrBoss, upload.single('image'), async (req, res) => {
-  const { title, body } = req.body;
+router.post('/', requireTeamLeaderOrBoss, upload.single('image'), handle(async (req, res) => {
+  const title = String(req.body.title || '').trim().slice(0, 200);
+  const body  = String(req.body.body  || '').trim().slice(0, 2000);
   if (!title || !body) return res.status(400).json({ error: 'Title and message are required' });
 
   let imageUrl = '';
@@ -56,7 +56,6 @@ router.post('/', requireTeamLeaderOrBoss, upload.single('image'), async (req, re
     title, body, createdBy: req.user.name, imageUrl, imagePublicId,
   });
 
-  // Email all staff with an email saved
   const staff = await User.find({ role: { $ne: 'boss' }, email: { $ne: '' } }).select('name email');
   let notified = 0;
   for (const member of staff) {
@@ -74,10 +73,9 @@ router.post('/', requireTeamLeaderOrBoss, upload.single('image'), async (req, re
   }
 
   res.status(201).json({ ...announcement.toObject(), notified });
-});
+}));
 
-// Delete announcement (boss/TL only) — also removes image from Cloudinary
-router.delete('/:id', requireTeamLeaderOrBoss, async (req, res) => {
+router.delete('/:id', requireTeamLeaderOrBoss, handle(async (req, res) => {
   const announcement = await Announcement.findById(req.params.id);
   if (!announcement) return res.status(404).json({ error: 'Not found' });
 
@@ -91,6 +89,6 @@ router.delete('/:id', requireTeamLeaderOrBoss, async (req, res) => {
 
   await announcement.deleteOne();
   res.json({ ok: true });
-});
+}));
 
 export default router;

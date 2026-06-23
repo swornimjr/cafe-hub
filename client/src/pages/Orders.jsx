@@ -17,6 +17,7 @@ export default function Orders() {
       method: 'PATCH',
       body: JSON.stringify({ status: 'sent' }),
     });
+    if (!res.ok) { showToast('Failed to update — try again'); return; }
     const updated = await res.json();
     setItems(prev => prev.map(i => i._id === id ? updated : i));
     showToast('Marked as fulfilled ✓');

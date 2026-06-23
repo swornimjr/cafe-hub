@@ -49,6 +49,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.use((err, req, res, next) => {
+  console.error(err.stack || err.message);
+  res.status(err.status || 500).json({ error: err.message || 'Something went wrong' });
+});
+
 const PORT = process.env.PORT || 5001;
 
 mongoose

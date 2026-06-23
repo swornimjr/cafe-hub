@@ -1,7 +1,12 @@
 import { Resend } from 'resend';
 
+let _resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
+
 export async function sendEmail({ to, subject, text, attachments = [] }) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
   const FROM = process.env.FROM_EMAIL || 'onboarding@resend.dev';
   const payload = {
     from: `Cafe Hub <${FROM}>`,
@@ -17,6 +22,6 @@ export async function sendEmail({ to, subject, text, attachments = [] }) {
     }));
   }
 
-  const { error } = await resend.emails.send(payload);
+  const { error } = await getResend().emails.send(payload);
   if (error) throw new Error(error.message);
 }

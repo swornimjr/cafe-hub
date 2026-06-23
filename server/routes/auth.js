@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { requireAuth, requireBoss, requireTeamLeaderOrBoss } from '../middleware/auth.js';
+import { handle } from '../middleware/asyncHandler.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = express.Router();
@@ -25,7 +26,7 @@ async function sendCredentials(to, name, username, password) {
 }
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', handle(async (req, res) => {
   const username = String(req.body.username || '').trim().slice(0, 50);
   const password = String(req.body.password || '').slice(0, 100);
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
@@ -39,16 +40,16 @@ router.post('/login', async (req, res) => {
     { expiresIn: '7d' }
   );
   res.json({ token, user: { id: user._id, name: user.name, role: user.role, username: user.username } });
-});
+}));
 
 // Get all users
-router.get('/users', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.get('/users', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const users = await User.find().select('-password').sort({ createdAt: -1 });
   res.json(users);
-});
+}));
 
 // Create user
-router.post('/users', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.post('/users', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const name = String(req.body.name || '').trim().slice(0, 80);
   const username = String(req.body.username || '').trim().toLowerCase().slice(0, 30);
   const role = String(req.body.role || '');
@@ -79,10 +80,10 @@ router.post('/users', requireAuth, requireTeamLeaderOrBoss, async (req, res) => 
     id: user._id, name: user.name, username: user.username,
     role: user.role, email: user.email, emailSent,
   });
-});
+}));
 
 // Delete user
-router.delete('/users/:id', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.delete('/users/:id', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const target = await User.findById(req.params.id);
   if (!target) return res.status(404).json({ error: 'User not found' });
   if (req.user.role === 'teamleader' && ['boss', 'teamleader'].includes(target.role)) {
@@ -90,10 +91,10 @@ router.delete('/users/:id', requireAuth, requireTeamLeaderOrBoss, async (req, re
   }
   await User.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
-});
+}));
 
 // Reset password (boss/TL resets someone else's)
-router.patch('/users/:id/password', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.patch('/users/:id/password', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (req.user.role === 'teamleader' && ['boss', 'teamleader'].includes(user.role)) {
@@ -111,10 +112,10 @@ router.patch('/users/:id/password', requireAuth, requireTeamLeaderOrBoss, async 
   }
 
   res.json({ ok: true, emailSent });
-});
+}));
 
 // Update own email (any logged-in user)
-router.patch('/me/email', requireAuth, async (req, res) => {
+router.patch('/me/email', requireAuth, handle(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase().slice(0, 100);
   if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
   const user = await User.findById(req.user.id);
@@ -122,10 +123,10 @@ router.patch('/me/email', requireAuth, async (req, res) => {
   user.email = email;
   await user.save();
   res.json({ ok: true });
-});
+}));
 
 // Update another user's email (boss/TL)
-router.patch('/users/:id/email', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.patch('/users/:id/email', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase().slice(0, 100);
   if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' });
   const user = await User.findById(req.params.id);
@@ -133,10 +134,10 @@ router.patch('/users/:id/email', requireAuth, requireTeamLeaderOrBoss, async (re
   user.email = email;
   await user.save();
   res.json({ ok: true, email: user.email });
-});
+}));
 
 // Send/resend credentials — generates a temp password, optionally updates email first
-router.post('/users/:id/resend-credentials', requireAuth, requireTeamLeaderOrBoss, async (req, res) => {
+router.post('/users/:id/resend-credentials', requireAuth, requireTeamLeaderOrBoss, handle(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -155,10 +156,10 @@ router.post('/users/:id/resend-credentials', requireAuth, requireTeamLeaderOrBos
 
   const sent = await sendCredentials(user.email, user.name, user.username, tempPassword);
   res.json({ ok: sent, email: user.email });
-});
+}));
 
 // Change own password (any logged-in user)
-router.patch('/me/password', requireAuth, async (req, res) => {
+router.patch('/me/password', requireAuth, handle(async (req, res) => {
   const currentPassword = String(req.body.currentPassword || '').slice(0, 100);
   const newPassword = String(req.body.newPassword || '').slice(0, 100);
   if (!currentPassword || !newPassword) {
@@ -175,10 +176,10 @@ router.patch('/me/password', requireAuth, async (req, res) => {
   user.password = newPassword;
   await user.save();
   res.json({ ok: true });
-});
+}));
 
 // Promote to team leader (boss only)
-router.patch('/users/:id/promote', requireAuth, requireBoss, async (req, res) => {
+router.patch('/users/:id/promote', requireAuth, requireBoss, handle(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (['boss', 'warehouse'].includes(user.role)) {
@@ -188,16 +189,16 @@ router.patch('/users/:id/promote', requireAuth, requireBoss, async (req, res) =>
   user.role = 'teamleader';
   await user.save();
   res.json({ id: user._id, name: user.name, username: user.username, role: user.role, originalRole: user.originalRole });
-});
+}));
 
 // Demote back to original role (boss only)
-router.patch('/users/:id/demote', requireAuth, requireBoss, async (req, res) => {
+router.patch('/users/:id/demote', requireAuth, requireBoss, handle(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user || user.role !== 'teamleader') return res.status(400).json({ error: 'User is not a team leader' });
   user.role = user.originalRole || 'atrium';
   user.originalRole = '';
   await user.save();
   res.json({ id: user._id, name: user.name, username: user.username, role: user.role, originalRole: user.originalRole });
-});
+}));
 
 export default router;

@@ -4,19 +4,22 @@ import RosterPublish from '../models/RosterPublish.js';
 import Settings from '../models/Settings.js';
 import User from '../models/User.js';
 import { requireBoss } from '../middleware/auth.js';
+import { handle } from '../middleware/asyncHandler.js';
 import { generateRosterPdf } from '../utils/generateRosterPdf.js';
 import { sendEmail } from '../utils/email.js';
 
 const router = express.Router();
 
+const VALID_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const VALID_STORES = ['Atrium','Cleanskin'];
+
 // Get shifts — boss sees all, staff only see published weeks for their store
-router.get('/', async (req, res) => {
+router.get('/', handle(async (req, res) => {
   const { store, weekOf } = req.query;
   const filter = {};
   if (store) filter.store = store;
   if (weekOf) filter.weekOf = weekOf;
 
-  // Staff: only return shifts if the week is published
   if (req.user.role !== 'boss') {
     const pub = await RosterPublish.findOne({ store, weekOf, published: true });
     if (!pub) return res.json([]);
@@ -24,35 +27,61 @@ router.get('/', async (req, res) => {
 
   const shifts = await Shift.find(filter);
   res.json(shifts);
-});
+}));
 
 // Add shift (boss only)
-router.post('/', requireBoss, async (req, res) => {
-  const shift = await Shift.create(req.body);
+router.post('/', requireBoss, handle(async (req, res) => {
+  const day   = String(req.body.day || '');
+  const name  = String(req.body.name || '').trim().slice(0, 80);
+  const store = String(req.body.store || '');
+  const time  = String(req.body.time || '').trim().slice(0, 30);
+  const weekOf = String(req.body.weekOf || '').trim().slice(0, 10);
+
+  if (!VALID_DAYS.includes(day) || !name || !VALID_STORES.includes(store) || !time || !weekOf) {
+    return res.status(400).json({ error: 'Invalid shift data' });
+  }
+
+  const shift = await Shift.create({ day, name, store, time, weekOf });
   res.status(201).json(shift);
-});
+}));
 
 // Edit shift (boss only)
-router.patch('/:id', requireBoss, async (req, res) => {
-  const shift = await Shift.findByIdAndUpdate(req.params.id, req.body, { new: true });
+router.patch('/:id', requireBoss, handle(async (req, res) => {
+  const updates = {};
+  if (req.body.day !== undefined) {
+    const day = String(req.body.day);
+    if (!VALID_DAYS.includes(day)) return res.status(400).json({ error: 'Invalid day' });
+    updates.day = day;
+  }
+  if (req.body.name !== undefined) updates.name = String(req.body.name).trim().slice(0, 80);
+  if (req.body.time !== undefined) updates.time = String(req.body.time).trim().slice(0, 30);
+  if (req.body.store !== undefined) {
+    const store = String(req.body.store);
+    if (!VALID_STORES.includes(store)) return res.status(400).json({ error: 'Invalid store' });
+    updates.store = store;
+  }
+  if (req.body.weekOf !== undefined) updates.weekOf = String(req.body.weekOf).trim().slice(0, 10);
+
+  const shift = await Shift.findByIdAndUpdate(req.params.id, updates, { new: true });
+  if (!shift) return res.status(404).json({ error: 'Shift not found' });
   res.json(shift);
-});
+}));
 
 // Delete shift (boss only)
-router.delete('/:id', requireBoss, async (req, res) => {
+router.delete('/:id', requireBoss, handle(async (req, res) => {
   await Shift.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
-});
+}));
 
 // Get publish status for a store+week
-router.get('/publish-status', async (req, res) => {
+router.get('/publish-status', handle(async (req, res) => {
   const { store, weekOf } = req.query;
   const pub = await RosterPublish.findOne({ store, weekOf });
   res.json(pub || { store, weekOf, published: false });
-});
+}));
 
 // Publish roster (boss only) — generates PDF, emails, returns PDF for download
-router.post('/publish', requireBoss, async (req, res) => {
+router.post('/publish', requireBoss, handle(async (req, res) => {
   const { store, weekOf, weekRange } = req.body;
 
   const pub = await RosterPublish.findOneAndUpdate(
@@ -90,10 +119,6 @@ router.post('/publish', requireBoss, async (req, res) => {
     } catch { return 9; }
   }
 
-  // A person appears in Opening if they have ANY shift starting before 12pm this week
-  // A person appears in Closing if they have ANY shift starting at 12pm or later
-  // A person can appear in BOTH sections (mixed week) — each section shows only relevant days
-  // A person with no shifts falls back to their stored shiftType
   const openingStaff = storeStaff
     .filter(u => {
       const ps = shifts.filter(s => s.name === u.name && s.time);
@@ -124,7 +149,7 @@ router.post('/publish', requireBoss, async (req, res) => {
   const filename = `roster-${store.toLowerCase()}-${weekOf}.pdf`;
   const pdfBuffer = await generateRosterPdf(store, weekRange || weekOf, weekOf, shifts, openingStaff, closingStaff);
 
-  // Email
+  // Email boss + store
   let emailSent = false;
   const storeEmail = store === 'Atrium' ? settings?.atriumEmail : settings?.cleanskinEmail;
   const to = [settings?.bossEmail, settings?.bossEmail2, settings?.ccEmail, storeEmail].filter(Boolean);
@@ -181,10 +206,10 @@ router.post('/publish', requireBoss, async (req, res) => {
     'X-Published-At': pub.publishedAt.toISOString(),
   });
   res.send(pdfBuffer);
-});
+}));
 
 // Notify staff of roster changes (boss only)
-router.post('/notify-changes', requireBoss, async (req, res) => {
+router.post('/notify-changes', requireBoss, handle(async (req, res) => {
   const { store, weekOf, weekRange, changes } = req.body;
   if (!changes?.length) return res.json({ ok: true, notified: 0 });
 
@@ -195,7 +220,6 @@ router.post('/notify-changes', requireBoss, async (req, res) => {
   const emailMap = {};
   storeStaff.forEach(u => { if (u.email) emailMap[u.name] = u.email; });
 
-  // Group changes by staff name
   const byName = {};
   changes.forEach(c => {
     if (!byName[c.name]) byName[c.name] = [];
@@ -224,25 +248,24 @@ router.post('/notify-changes', requireBoss, async (req, res) => {
   }
 
   res.json({ ok: true, notified });
-});
+}));
 
 // Copy all shifts from one week to another (boss only)
-router.post('/copy-week', requireBoss, async (req, res) => {
+router.post('/copy-week', requireBoss, handle(async (req, res) => {
   const { store, fromWeekOf, toWeekOf } = req.body;
   const source = await Shift.find({ store, weekOf: fromWeekOf });
   if (!source.length) return res.status(404).json({ error: 'No shifts found for that week' });
 
-  // Remove existing shifts in target week first
   await Shift.deleteMany({ store, weekOf: toWeekOf });
 
   const copies = await Shift.insertMany(
     source.map(s => ({ day: s.day, name: s.name, time: s.time, store: s.store, weekOf: toWeekOf }))
   );
   res.json(copies);
-});
+}));
 
 // Unpublish roster (boss only)
-router.post('/unpublish', requireBoss, async (req, res) => {
+router.post('/unpublish', requireBoss, handle(async (req, res) => {
   const { store, weekOf } = req.body;
   const pub = await RosterPublish.findOneAndUpdate(
     { store, weekOf },
@@ -250,6 +273,6 @@ router.post('/unpublish', requireBoss, async (req, res) => {
     { upsert: true, new: true }
   );
   res.json(pub);
-});
+}));
 
 export default router;
