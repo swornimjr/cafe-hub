@@ -30,6 +30,45 @@ function greeting() {
   return 'Good evening';
 }
 
+const QUICK_LINKS = {
+  boss:       [
+    { tab: 'atrium-roster',    label: 'Atrium Roster',    icon: '📋' },
+    { tab: 'cleanskin-roster', label: 'Cleanskin Roster', icon: '📋' },
+    { tab: 'stock',            label: 'Stock Orders',     icon: '📦' },
+    { tab: 'menu',             label: 'Menu',             icon: '☕' },
+    { tab: 'announcements',    label: 'Announcements',    icon: '📢' },
+    { tab: 'users',            label: 'Staff Accounts',   icon: '👥' },
+  ],
+  teamleader: [
+    { tab: 'atrium-roster',    label: 'Atrium Roster',    icon: '📋' },
+    { tab: 'cleanskin-roster', label: 'Cleanskin Roster', icon: '📋' },
+    { tab: 'stock',            label: 'Stock Orders',     icon: '📦' },
+    { tab: 'menu',             label: 'Menu',             icon: '☕' },
+    { tab: 'announcements',    label: 'Announcements',    icon: '📢' },
+  ],
+  atrium: [
+    { tab: 'atrium-roster',    label: 'My Roster',        icon: '📋' },
+    { tab: 'menu',             label: 'Menu',             icon: '☕' },
+    { tab: 'recipes',          label: 'Recipes',          icon: '📖' },
+    { tab: 'announcements',    label: 'Announcements',    icon: '📢' },
+  ],
+  cleanskin: [
+    { tab: 'cleanskin-roster', label: 'My Roster',        icon: '📋' },
+    { tab: 'menu',             label: 'Menu',             icon: '☕' },
+    { tab: 'recipes',          label: 'Recipes',          icon: '📖' },
+    { tab: 'announcements',    label: 'Announcements',    icon: '📢' },
+  ],
+  warehouse: [
+    { tab: 'orders',           label: 'Approved Orders',  icon: '✅' },
+    { tab: 'announcements',    label: 'Announcements',    icon: '📢' },
+  ],
+};
+
+const STAT_CARDS = [
+  { key: 'pending',  label: 'Pending stock', icon: '📦', color: 'var(--amber)', lightBg: 'var(--amber-light)', shadow: 'rgba(217,119,6,0.16)' },
+  { key: 'approved', label: 'Ready to send', icon: '✅', color: 'var(--green)', lightBg: 'var(--green-light)', shadow: 'rgba(21,128,61,0.16)' },
+];
+
 const STORE_THEMES = {
   Atrium: {
     bg:        '#a8f6bf',
@@ -116,20 +155,13 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
     const myToday = myShiftsWeek.filter(s => s.day === todayLabel);
     return (
       <>
-        {/* Greeting banner — same style as boss */}
-        <div style={{
-          background: 'linear-gradient(120deg, var(--espresso) 0%, #2d3f55 100%)',
-          borderRadius: 14, padding: '20px 24px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          boxShadow: 'var(--shadow-md)',
-        }}>
+        {/* Greeting banner */}
+        <div className="dash-banner">
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-              {greeting()}, {user?.name?.split(' ')[0]}
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{dateStr}</div>
+            <div className="dash-banner-heading">{greeting()}, {user?.name?.split(' ')[0]}</div>
+            <div className="dash-banner-date">{dateStr}</div>
           </div>
-          <div style={{ fontSize: 32, opacity: 0.85 }}>
+          <div className="dash-banner-icon">
             {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
           </div>
         </div>
@@ -138,7 +170,7 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
         {latestAnnouncements.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             {latestAnnouncements.map(a => (
-              <div key={a._id} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderLeft: '4px solid #f59e0b', borderRadius: 10, padding: '12px 16px' }}>
+              <div key={a._id} style={{ background: 'var(--amber-light)', border: '1px solid #fcd34d', borderRadius: 10, padding: '12px 16px' }}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>📢 {a.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{a.body}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
@@ -196,6 +228,22 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
             })
           }
         </div>
+
+        {/* Quick links */}
+        {(QUICK_LINKS[role] || []).length > 0 && (
+          <div className="card">
+            <div className="card-title">Quick links</div>
+            <div className="quick-links-grid">
+              {(QUICK_LINKS[role] || []).map(({ tab, label, icon }) => (
+                <button key={tab} className="quick-link-tile" onClick={() => onTabChange?.(tab)}>
+                  <span className="quick-link-icon">{icon}</span>
+                  <span className="quick-link-label">{label}</span>
+                  <span className="quick-link-arrow">→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -204,35 +252,31 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
   return (
     <>
       {/* Greeting banner */}
-      <div style={{
-        background: 'linear-gradient(120deg, var(--espresso) 0%, #2d3f55 100%)',
-        borderRadius: 14, padding: '20px 24px', marginBottom: 20,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        boxShadow: 'var(--shadow-md)',
-      }}>
+      <div className="dash-banner">
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>{greeting()}</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{dateStr}</div>
+          <div className="dash-banner-heading">{greeting()}</div>
+          <div className="dash-banner-date">{dateStr}</div>
         </div>
-        <div style={{ fontSize: 32, opacity: 0.85 }}>
+        <div className="dash-banner-icon">
           {new Date().getHours() < 12 ? '☀️' : new Date().getHours() < 17 ? '🌤️' : '🌙'}
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
-        {[
-          { count: pending.length,  label: 'Pending stock',  icon: '📦', color: 'var(--amber)', lightBg: 'var(--amber-light)' },
-          { count: approved.length, label: 'Ready to send',  icon: '✅', color: 'var(--green)', lightBg: 'var(--green-light)' },
-        ].map(({ count, label, icon, color, lightBg }) => (
+        {STAT_CARDS.map(({ key, label, icon, color, lightBg, shadow }) => {
+          const count = key === 'pending' ? pending.length : approved.length;
+          return (
           <div key={label} className="stat-card" style={{
-            borderLeft: `3px solid ${count > 0 ? color : 'var(--border)'}`,
             display: 'flex', alignItems: 'center', gap: 14,
             padding: '16px 18px', textAlign: 'left',
+            background: count > 0 ? lightBg : '#fff',
+            borderColor: count > 0 ? color : undefined,
+            boxShadow: count > 0 ? `0 4px 20px ${shadow}` : undefined,
           }}>
             <div style={{
               width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-              background: count > 0 ? lightBg : 'var(--foam)',
+              background: count > 0 ? 'rgba(255,255,255,0.6)' : 'var(--foam)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
             }}>{icon}</div>
             <div>
@@ -240,7 +284,8 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
               <div className="stat-label">{label}</div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Today's roster — both stores */}
@@ -260,7 +305,7 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
                   borderBottom: `1px solid ${t.border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: t.label, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.label, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     {t.icon} {store}
                   </div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: t.label, opacity: 0.7 }}>
@@ -309,6 +354,20 @@ export default function Dashboard({ role, onStockCount, onTabChange }) {
           ))}
         </div>
       )}
+
+      {/* Quick links */}
+      <div className="card">
+        <div className="card-title">Quick links</div>
+        <div className="quick-links-grid">
+          {(QUICK_LINKS[role] || []).map(({ tab, label, icon }) => (
+            <button key={tab} className="quick-link-tile" onClick={() => onTabChange?.(tab)}>
+              <span className="quick-link-icon">{icon}</span>
+              <span className="quick-link-label">{label}</span>
+              <span className="quick-link-arrow">→</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
